@@ -2,7 +2,7 @@
 
 Hier ein kurzes tutorial zum schreiben
 
-Installiert Latex bitt vorher kein bock das hier zu erkleren ...
+Installiert Latex bitte vorher installieren kein bock das hier zu erklären ...
 
 ## Schreiben
 
