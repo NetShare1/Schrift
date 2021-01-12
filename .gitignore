@@ -186,3 +186,7 @@ pip-log.txt
 *.bcf
 _Diplomarbeit.run.xml
 *.pdf
+*.fls
+*.fdb_latexmk
+*.gz
+*.synctex(busy)
