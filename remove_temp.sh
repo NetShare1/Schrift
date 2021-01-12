@@ -11,3 +11,10 @@ rm -rf *.glo
 rm -rf *.ist
 rm -rf *.glg
 rm -rf *.gls
+rm -rf *.fls
+rm -rf *.fdb_latexmk
+rm -rf *.gz
+rm -rf "*.synctex(busy)"
+rm -rf *.ilg
+rm -rf *.log
+rm -rf *.ind
