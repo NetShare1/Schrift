@@ -185,7 +185,6 @@ pip-log.txt
 *.glg
 *.bcf
 _Diplomarbeit.run.xml
-*.pdf
 *.fls
 *.fdb_latexmk
 *.gz
