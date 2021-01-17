@@ -1,3 +1,4 @@
+#! /bin/sh
 rm -rf *.aux
 rm -rf *.lof
 rm -rf *.lot
