@@ -11,7 +11,7 @@ Der Treiber ist dafür verantwortlich Pakete aus Windows zu dem Server zu senden
 \end{itemize}
 Außerdem müssen gewisse Standards von Performance, Stabilität und Ressourcenintensität gehalten werden. Dabei haben wir versucht folgende Metriken einzuhalten:
 \begin{itemize}
-    \item Maximale prozentuale CPU Auslastung von 3 \%, bei einer 100 MB/s Übertragungsrate auf einem (Prozessor von Tests einsetzten)
+    \item Maximale prozentuale CPU Auslastung von 3 \%, bei einer 100 Mbit/s Übertragungsrate auf einem (Prozessor von Tests einsetzten)
     \item Maximaler Speicherverbrauch von 300 Mega Byte bei Verwendung von 2 übertragenen Netzwerkadaptern über eine Dauer von 30 Minuten.
     \item Wenn es zum Absturz des Treibers kommen sollte, darf das Betriebssystem nicht mit abstürzen.
     \item Der Treiber sollte weiter funktionieren, auch wenn während des Betriebs ein Netzwerkadapter ausfällt.
@@ -40,21 +40,21 @@ Nach diesen 2 Schritten werden von Programmen gesendete Pakete, von Windows mith
 \end{figure}
 \newpage
 \subsection{Kommunikation zwischen Treiber und Server}
-Der Treiber kann jetzt Pakete von Windows erhalten und muss diese jetzt an den Server schicken. Hierzu war die erste Entscheidung, die wir fällen haben mussten, auf welche Art wir die Pakete an den Server schicken. Dabei hatten wir zwei Möglichkeiten, die erste ist das wir Wintun zum Senden und Empfangen der Pakete vom Server benutzen oder wir erstellen einen Socket und lassen über diesen die Kommunikation mit dem Server laufen.
+Der Treiber kann jetzt Pakete von Windows erhalten und muss diese an den Server schicken. Hierzu war die erste Entscheidung, die wir fällen mussten, auf welche Art wir die Pakete an den Server schicken. Dafür hatten wir zwei Möglichkeiten. Wir verwenden Wintun zum Senden und Empfangen der Pakete vom Server oder wir erstellen einen Socket und lassen über diesen die Kommunikation mit dem Server laufen.
 \newline
 \newline
-Wenn, wir Wintun verwenden würden hätten wir den Vorteil das wir keine weitere externe Bibliothek benutzen müssten und das wir eine höhere Performance hätten, weil wir Pakete von Schicht 3 versenden würde und uns dadurch eine Schicht beim Senden sparen würden.
+Wenn, wir Wintun verwenden haben wir den Vorteil das wir keine weitere externe Bibliothek benutzen müssen und eine höhere Performance haben, weil wir Pakete von OSI Schicht 3 versenden und uns dadurch eine Schicht beim Senden sparen.
 \newline
 \newline
-Der Grund warum wir uns aber dazu entschieden haben Sockets zu nutzen ist der Programmieraufwand. Wir hätten zwar bei Wintun eine Performance Steigerung jedoch würde es auch Bedeuten, dass wir uns mit dem Aufbau der einzelnen IP Pakete beschäftigen müssen. Was alleine auch nicht allzu schlimm gewesen wäre, wenn wir uns nicht auch noch um die Firewalls kümmern müssten. Dadurch das Firewalls weiter oben im OSI Modell angelegt sind als unser TUN Gerät, müssen wir beim Empfangen von Paketen sichergehen, das die Firewall diese nicht wegwirft. Das heißt, wir müssten Windows mitteilen, dass wir einen gewissen Port benutzen und Pakete von einer gewissen IP-Adresse erwarten. Aus diesen beiden Gründen und durch unseren bestehenden Zeitdruck haben wir uns dazu entschieden eine Socket Bibliothek zu verwenden.
+Der Grund warum wir uns aber dazu entschieden haben Sockets zu nutzen ist der Programmieraufwand. Wir haben zwar bei Wintun eine Performance Steigerung jedoch würde es auch bedeuten, dass wir uns mit dem Aufbau der einzelnen IP Pakete beschäftigen müssen. Was alleine akzeptabel wäre, wenn wir uns nicht auch noch um die Firewalls kümmern müssten. Dadurch das Firewalls weiter oben im OSI Modell angelegt sind als unser TUN Gerät, müssen wir beim Empfangen von Paketen sicherstellen, das die Firewall diese nicht wegwirft. Das heißt, wir müssen Windows mitteilen, dass wir einen gewissen Port benutzen und Pakete von einer gewissen IP-Adresse erwarten. Aus diesen beiden Gründen und durch unseren bestehenden Zeitdruck haben wir uns dazu entschieden eine Socket Bibliothek zu verwenden.
 \newline
 \newline
 Für die Socket Bibliothek haben wir uns dann für die Windows Sockets 2 API entschieden, weil diese von Microsoft für das Performante verwenden von Sockets unter Windows entwickelt wurde. Außerdem haben wir den Vorteil das wir die Bibliothek nicht selber verwalten müssen, weil diese automatisch von Windows aktualisiert wird.
 \subsection{Pakete auf Programme aufteilen}
-Nachdem wir jetzt Pakete einsammeln können, diese dann an den Server schicken und empfangen können, müssen wir uns nur mehr darum kümmern, dass wir die Pakete aus unserem Treiber wieder an die Programme verteilen können, zu denen sie gehören.
+Nachdem wir jetzt Pakete einsammeln können, diese dann an den Server schicken und empfangen können, müssen wir uns nur mehr sicherstellen, dass wir die Pakete aus unserem Treiber wieder an die Programme verteilen können, zu denen sie gehören. 
 \newline
 \newline
-Hierfür machen wir uns wieder Wintun zu nutzen, indem wir die Pakete, die wir bekommen haben, nehmen und einfach über unser Wintun Gerät senden. Windows erkennt dann, dass das Paket an sich selbst gerichtet ist und verarbeitet es als wäre es von einem normalen Adapter gekommen. Durch diese Art der Aufteilung lagern wir den meisten Programmieraufwand an Windows aus und können auch für eine hohe Performance garantieren.
+Hierfür machen wir uns wieder Wintun zu nutzen, indem wir die Pakete, die wir bekommen haben, nehmen und einfach über unser Wintun Gerät senden. Windows erkennt dann, dass das Paket an sich selbst gerichtet ist und verarbeitet es als wäre es von einem normalen Netzwerk Adapter gekommen. Durch diese Art der Aufteilung lagern wir den meisten Programmieraufwand an Windows aus und können auch für eine hohe Performance garantieren.
 \newpage
 Fügt man nun alle 3 Überlegungen zusammen, kommt man auf Folgendes:
 \begin{figure}[H]
@@ -62,3 +62,69 @@ Fügt man nun alle 3 Überlegungen zusammen, kommt man auf Folgendes:
     \includegraphics[width=0.8\textwidth]{kommunikation_mit_internet.png}
     \caption[Kommunikation mit Server]{Kommunikation mit Server \footnotemark[1]{Vgl. \ref{kommunikationMitInternet}}} 
 \end{figure}
+\newpage
+\section{Implementierung der Architektur}
+\subsection{Senden und Empfangen von Paketen}
+\subsubsection{Erstellen des Eintrags in die IP Routing Tabelle}
+Bevor wir überhaupt testen haben können, ob wir Pakete von Windows empfangen können müssen wir einen Eintrag in den IP Routing Table eintragen. Am Anfang haben wir diese per Hand über das Programm \textbf{route} gemacht. Dieses Bietet ein einfaches Interface um über die Konsole Einträge zu verwalten. Der Befehl, den wir dazu verwendet haben schaut, folgendermaßen aus:
+\begin{program}[H]
+\caption{Route - Beispiel}
+\begin{GenericCode}
+route add 0.0.0.0 mask 0.0.0.0 10.0.0.1 metric 7 if 21  
+\end{GenericCode}
+\end{program}
+Wenn wir uns die IP Routing Tabelle nun anzeigen lassen sehen wir das folgender Eintrag erstellt wurde.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{ip_routing_table_entry.png}
+    \caption[IP Routing Table Eintrag]{IP Routing Table Eintrag \footnotemark[1]{Vgl. \ref{flasklogo}}} 
+\end{figure}
+In diesem Ausschnitt können wir zwei Einträge sehen. Der erste ist der Eintrag für das Standardgateway das gerade ausgewählt ist und der zweite ist der Eintrag, den wir gerade eben erstellt haben. 
+\newline
+\newline
+Wir können sehen das beide Eintrage als \textbf{Netzwerkziel} und als \textbf{Netzwerkmaske} die gleichen Werte haben. Das ist so, weil beide Einträge die gleiche Gruppe von IP Paketen umleiten wollen. Routen die als Netzwerkziel und als Netzwerkmaske \textbf{0.0.0.0} haben werden Standard Routen angesehen, das heißt das alle IP Pakete, die nicht von einer genaueren Route umgeleitet werden, von dieser Regel beeinflusst wird\footnote[1]{\url{https://www.techopedia.com/definition/2184/default-gateway}, 2021-02-01 17:58 MEZ}.
+\newline
+\newline
+Die Gateway-IP-Adresse gibt an welche Adresse die IP-Pakete weitergeleitet werden sollen. In dem Fall von unserem Eintrag ist das die IP-Adresse des Virtuellen Netzwerkadapters. Bei dem Eintrag, der bereits vorhanden ist, ist die interne IP-Adresse meines Routers eingetragen.
+\newline
+\newline
+Die Schnittstelle gibt an über welchen Netzwerkadapter die Pakte verschickt. Bei unserem Eintrag ist es \textit{10.0.0.3}, weil dies die Adresse ist die unser Wintun Netzwerkadapter zugewiesen bekommen hat. Beim anderen Eintrag ist die IP-Adresse zu sehen die zurzeit als Standardgateway eingestellt ist. 
+\newline
+\newline
+Als Letztes muss noch die Metrik eingestellt werden. Diese bestimmt welcher Eintrag verwendet wird. Die Metrik wird benutzt, wenn es für ein IP-Paket mehrere passende Einträge gibt. In solch einem Fall wird die Metrik mit der geringsten Metrik gewählt\footnote[2]{\url{https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/route_ws2008}, 2021-01-16 23:30 MEZ}.
+\newpage
+Später in der Entwicklung haben aber eine programmatische Lösung gebraucht, weil wir nicht davon ausgehen können, dass alle Endnutzer genügend technische Kenntnisse haben, um die Route selber einzustellen. Deswegen benutzen wir Funktionen aus der \textbf{iphlpapi.h}\footnote[1]{\url{https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/}, 2021-02-01 17:14 MEZ} Bibliothek. Diese stellt Funktionen zu auslesen und bearbeiten des IP Routing Tables zur Verfügung.
+\newline
+\newline
+Bevor wir eine Verbindung mit dem Server aufbauen lesen wir also den IP Routing Table aus und speichern das derzeitige Standardgateway zwischen und löschen es danach aus der Tabelle. Jetzt wird ein neuer Eintrag erstellt, der alle IP-Pakete durch unseren Netzwerkadapter an unseren Server schickt.
+\newline
+\newline
+Wenn die Verbindung wieder abgebaut werden soll, löschen wir den von uns erstellten Eintrag wieder, lesen das zwischengespeicherte Standardgateway wieder aus und fügen es in den IP Routing Table ein.
+\newline
+\newline
+Um sicherzustellen das, selbst wenn das Programm unerwartet abstürzt, das alte Standardgateway wieder hergestellt werden kann, speichern wir dieses in einer Datei. Diese wird beim Start des Programms ausgelesen und wenn kein Standardgateway gesetzt ist, wird dies aus der Datei wieder hergestellt. Um zu verhindern, dass das Standardgateway neu gesetzt wird, obwohl kein Absturz geschehen ist, wird die Datei nach einem erfolgreichen Verbindungsabbau wieder gelöscht.
+\subsubsection{Empfangen von Paketen}
+Nachdem jetzt sichergestellt wurde, dass alle IP-Pakete, die nicht an das interne Netzwerk gerichtet sind, an unser TUN Netzwerkadapter gesendet werden. Müssen wir diese auslesen und zur Weiterverarbeitung zwischenspeichern.
+\newline
+\newline
+Hierzu erstellen wir, falls noch keiner Vorhanden ist, einen virtuellen Wintun Netzwerkadapter. Dieser Netzwerkadapter spiegelt ein TUN Treiber wider, das bedeutet das er OSI Layer 3 Pakete weiterverarbeitet. Der Treiber läuft im Kernal Mode\footnote[1]{\url{https://git.zx2c4.com/wintun/tree/driver/wintun.inf}, 2021-02-02 18:25 MEZ} verarbeitet aber Pakete selber nicht, sondern speichert diese in einem Ring Puffer zwischen\footnote[2]{\url{https://git.zx2c4.com/wintun/tree/driver/wintun.c}, 2021-02-02 18:24 MEZ} wo sie von einem sich im Users Mode befindenden Programm weiterverarbeitet werden können. Das hat den großen Vorteil das wir keinen Low Level Windows Code schreiben müssen, wir können davon ausgehen, dass der Treiber stabil läuft und die Integrität des Betriebssystems nicht negativ beeinflusst. Jedoch hat es den Nachteil das der Code, der für das Verarbeiten von dem IP Paketen zuständig ist, im User Mode läuft, welcher wesentlich langsamer ist als der Kernel Mode. Weil Programme die im User Mode laufen immer wieder auf Funktionen zugreifen müssen die nur im Kernel Mode ausgeführt werden können, müssen diese dann einen Ressourcen aufwendigen Context Switch durchführen\footnote[3]{\url{https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/user-mode-and-kernel-mode}, 2021-02-02 18:32 MEZ}.
+\newline
+\newline
+Nachdem wir sichergestellt haben, dass es unseren Netzwerkadapter gibt versuchen wir einen Handle auf ihn zu bekommen. In Windows repräsentiert ein Handle eine Ressource auf das ein Programm zugreifen will\footnote[1]{\url{https://docs.microsoft.com/en-us/windows/win32/sysinfo/about-handles-and-objects}, 2021-02-02 18:41 MEZ}. Das heißt durch Handles hat Windows einen Weg sicherzustellen das zum Beispiel auf Dateien nicht zweimal schreiben Zugegriffen wird. Wir fordern also einen Handle für unseren Netzwerkadapter an um Operationen an ihm durchführen zu können.
+\newline
+\newline
+Mit dem Adapter Handle, den wir angefordert haben, können wir diesen nun einstellen so wie wir ihn benötigen. Wir stellen also die IP-Adresse, die uns zugewiesen wurde und die dazugehörigen Subnetbits ein. Danach ist der Netzwerkadapter fertig eingestellt und könnte theoretisch Daten empfangen.
+\newline
+\newline
+Der Netzwerkadapter ist aber noch nicht “eingeschalten” dazu müssen wir eine Session erstellen. In dieser Session können wir einstellen wie groß die Ring Puffer im Treiber sind. Wir haben uns bei der Größe für die maximal von Wintun zugelassene Größe von 64 Mebibyte entschieden. Mithilfe dieser Session können wir, dann anfangen die Pakete, die unser Netzwerkadapter empfangen hat, zu übernehmen und diese weiterzuverarbeiten.
+\subsubsection{Weiterverarbeiten von Paketen}
+Wir können jetzt Pakete von unseren Netzwerkadapter empfangen und diese dann an unser Programm übertragen. Jetzt müssen wir das Paket zwischenlagern und weiterverarbeiten. Dafür haben wir zwei verschiedene Lösungswege ausgedacht. 
+\newline
+\newline
+Der Erste ist, Pakete die Empfangen wurden direkt über einen davor erstellten Socket zum Server zu schicken.  Dieser Ansatz hat zwar den Vorteil des er simpel und einfach zu implementieren ist. Jedoch überwiegen die Nachteile hier die Vorteile. 
+\newline
+\newline
+Ein großer Nachteil ist das, wenn wir ein Paket empfangen und dies an sofort verarbeiten und über einen Socket versenden, keine weiteren Pakete empfangen können bis dieses Paket abgesendet wurde. Der Grund dafür das in diesem Fall der ganze Prozess nur in einem einzigen Thread ablaufen würde und dadurch Zeit, die er zum Empfangen verwenden könnte, für das verarbeiten und senden verwendet.
+\newline
+\newline
+Also haben wir uns dazu entschieden alle diese Schritte in eigene Threads auszulagern. Das heißt wir haben eigene Threads zum Senden, Empfangen und Verarbeiten von Paketen. Damit wir mit mehreren Threads performant arbeiten können brauchen wir einen Lösung, um eine Kommunikation zwischen den einzelnen Threads aufzubauen.
