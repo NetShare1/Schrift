@@ -1,116 +1,117 @@
 \chapter{Treiber}
 \label{chap:Treiber}
 
-\section{Treiber Architektur}
-\subsection{Anforderungen}
-Der Treiber ist dafür verantwortlich Pakete aus Windows zu dem Server zu senden. Dabei müssen 3 Probleme gelöst werden:
+\section{Architektur des Multi-Wan Bonding fähigen Windows Treibers}
+\subsection{Design}
+\subsubsection{Anforderungen}
+Unser Multi-Wan Bonding Treiber ist dafür verantwortlich Pakete aus Windows zu dem Server zu senden. Dabei müssen 3 Probleme gelöst werden:
+\newline
 \begin{itemize}
     \item Sammeln von IP Paketen aus Windows
     \item Verteilen von IP Paketen an Programme
     \item Kommunikation zwischen Treiber und Server
 \end{itemize}
+\ \\
 Außerdem müssen gewisse Standards von Performance, Stabilität und Ressourcenintensität gehalten werden. Dabei haben wir versucht folgende Metriken einzuhalten:
+\newline
 \begin{itemize}
-    \item Maximale prozentuale CPU Auslastung von 3 \%, bei einer 100 Mbit/s Übertragungsrate auf einem (Prozessor von Tests einsetzten)
+    \item Maximale prozentuale CPU Auslastung von 5 \%, bei einer 100 Mbit/s Übertragungsrate auf einem (Prozessor von Tests einsetzten)
     \item Maximaler Speicherverbrauch von 300 Mega Byte bei Verwendung von 2 übertragenen Netzwerkadaptern über eine Dauer von 30 Minuten.
     \item Wenn es zum Absturz des Treibers kommen sollte, darf das Betriebssystem nicht mit abstürzen.
     \item Der Treiber sollte weiter funktionieren, auch wenn während des Betriebs ein Netzwerkadapter ausfällt.
 \end{itemize}
-Zur Bedienungsfreundlichkeit wird eine CLI zur Verfügung gestellt mit welcher folgende Operationen ermöglicht werden:
+\ \\
+Zur Bedienungsfreundlichkeit wird ein Command Line Interface (CLI)  zur Verfügung gestellt mit welcher folgende Operationen ermöglicht werden:
+\newline
 \begin{itemize}
     \item Konfigurieren des Treibers über JSON, Key-Value Dateien oder über die Konsole
     \item Starten und Stoppen der Kommunikation des Treibers mit dem Server
     \item Stoppen und Starten des Treibers
     \item Ausgabe von derzeitigen Einstellungen
 \end{itemize}
+\ \\
 Die CLI soll über eine lokale TCP Verbindung mit dem Treiber kommunizieren damit sichergestellt werden kann das andere Komponenten leicht eingebunden werden können.
-\newpage
+
+
 \subsection{Sammeln von IP Paketen in Windows}
-Damit Pakete an den Server versendet werden können, müssen wir dafür sorgen, dass Pakete die von verschiedenen Programmen in Windows verschickt werden durch unseren Treiber laufen. Um Pakete entgegennehmen zu können muss ein virtueller Netzwerkadapter erstellt werden. Dazu verwenden wir den Netzwerktreiber Wintun\footnote[1]{\url{https://www.wintun.net/}, 2021-01-16 23:19 MEZ}. Dieser kann performant Pakete empfangen und versenden.
+Damit Pakete an den Server versendet werden können, müssen wir dafür sorgen, dass Pakete die von verschiedenen Programmen in Windows verschickt werden durch unseren Treiber leiten. Um Pakete entgegennehmen zu können muss ein virtueller Netzwerkadapter erstellt werden. Dazu verwenden wir den Netzwerktreiber Wintun\footnote[1]{\url{https://www.wintun.net/}, 2021-01-16 23:19 MEZ}. Dieser kann performant Pakete empfangen und versenden.
 \newline
 \newline
 Wintun kann jetzt zwar Pakete empfangen. Windows weiß aber noch nicht das es Pakete in den virtuellen Netzwerkadapter umleiten muss. Dafür muss eine statische IP Route im Windows internen IP Routing Table\footnote[2]{\url{https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/route_ws2008}, 2021-01-16 23:30 MEZ} eingetragen werden.
 \newline
 \newline
-Nach diesen 2 Schritten werden von Programmen gesendete Pakete, von Windows mithilfe  der Informationen im IP Routing Table, an den Wintun Adapter gesendet und dort durch unseren Treiber verarbeitet.
+Nach diesen 2 Schritten werden von Programmen gesendete Pakete, von Windows mithilfe  der Informationen im IP Routing Table, an den Wintun Adapter gesendet und dort durch unseren Treiber verarbeitet. (Für Details siehe Abbildung 7.1)
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{diagramm_sammel_von_ip_paketen.png}
-    \caption[Sammeln von IP Paketen]{Sammeln von IP Paketen \footnotemark[1]{Vgl. \ref{flasklogo}}} 
+    \caption[Sammeln von IP Paketen]{Sammeln von IP Paketen} 
 \end{figure}
 \newpage
-\subsection{Kommunikation zwischen Treiber und Server}
+
+
+\subsection{Kommunikation zwischen Mulit-Wan Bonding Treiber und Mulit-Wan Bonding Server}
 Der Treiber kann jetzt Pakete von Windows erhalten und muss diese an den Server schicken. Hierzu war die erste Entscheidung, die wir fällen mussten, auf welche Art wir die Pakete an den Server schicken. Dafür hatten wir zwei Möglichkeiten. Wir verwenden Wintun zum Senden und Empfangen der Pakete vom Server oder wir erstellen einen Socket und lassen über diesen die Kommunikation mit dem Server laufen.
 \newline
 \newline
 Wenn, wir Wintun verwenden haben wir den Vorteil das wir keine weitere externe Bibliothek benutzen müssen und eine höhere Performance haben, weil wir Pakete von OSI Schicht 3 versenden und uns dadurch eine Schicht beim Senden sparen.
 \newline
 \newline
-Der Grund warum wir uns aber dazu entschieden haben Sockets zu nutzen ist der Programmieraufwand. Wir haben zwar bei Wintun eine Performance Steigerung jedoch würde es auch bedeuten, dass wir uns mit dem Aufbau der einzelnen IP Pakete beschäftigen müssen. Was alleine akzeptabel wäre, wenn wir uns nicht auch noch um die Firewalls kümmern müssten. Dadurch das Firewalls weiter oben im OSI Modell angelegt sind als unser TUN Gerät, müssen wir beim Empfangen von Paketen sicherstellen, das die Firewall diese nicht wegwirft. Das heißt, wir müssen Windows mitteilen, dass wir einen gewissen Port benutzen und Pakete von einer gewissen IP-Adresse erwarten. Aus diesen beiden Gründen und durch unseren bestehenden Zeitdruck haben wir uns dazu entschieden eine Socket Bibliothek zu verwenden.
+Der Grund warum wir uns aber dazu entschieden haben Sockets zu nutzen ist der Programmieraufwand. Wir haben zwar bei Wintun eine Performance Steigerung jedoch würde es auch bedeuten, dass wir uns mit dem Aufbau der einzelnen IP Pakete beschäftigen müssen. Was alleine akzeptabel wäre, wenn wir uns nicht auch noch um die Firewalls kümmern müssten. Dadurch das Firewalls weiter oben im OSI Modell angelegt sind als unser TUN Gerät\footnote[1]{\url{https://petri.com/csc_routers_switches_and_firewalls}, 2021-02-01 18:03 MEZ}, müssen wir beim Empfangen von Paketen sicherstellen, das die Firewall diese nicht wegwirft. Das heißt, wir müssen Windows mitteilen, dass wir einen gewissen Port benutzen und Pakete von einer gewissen IP-Adresse erwarten. Aus diesen beiden Gründen und durch unseren bestehenden Zeitdruck haben wir uns dazu entschieden eine Socket Bibliothek zu verwenden.
 \newline
 \newline
 Für die Socket Bibliothek haben wir uns dann für die Windows Sockets 2 API entschieden, weil diese von Microsoft für das Performante verwenden von Sockets unter Windows entwickelt wurde. Außerdem haben wir den Vorteil das wir die Bibliothek nicht selber verwalten müssen, weil diese automatisch von Windows aktualisiert wird.
-\subsection{Pakete auf Programme aufteilen}
+
+
+\subsection{Pakete aus dem Mulit-Wan Bonding Treiber auf andere Programme des Betriebssystems aufteilen}
 Nachdem wir jetzt Pakete einsammeln können, diese dann an den Server schicken und empfangen können, müssen wir uns nur mehr sicherstellen, dass wir die Pakete aus unserem Treiber wieder an die Programme verteilen können, zu denen sie gehören. 
 \newline
 \newline
 Hierfür machen wir uns wieder Wintun zu nutzen, indem wir die Pakete, die wir bekommen haben, nehmen und einfach über unser Wintun Gerät senden. Windows erkennt dann, dass das Paket an sich selbst gerichtet ist und verarbeitet es als wäre es von einem normalen Netzwerk Adapter gekommen. Durch diese Art der Aufteilung lagern wir den meisten Programmieraufwand an Windows aus und können auch für eine hohe Performance garantieren.
 \newpage
-Fügt man nun alle 3 Überlegungen zusammen, kommt man auf Folgendes:
+Fügt man nun alle 3 Überlegungen zusammen, kommt man auf Folgendes. (Siehe Abbildung 7.2)
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{kommunikation_mit_internet.png}
-    \caption[Kommunikation mit Server]{Kommunikation mit Server \footnotemark[1]{Vgl. \ref{kommunikationMitInternet}}} 
+    \caption[Vollständige Mulit-Wan Bonding Treiber Architektur]{Vollständige Mulit-Wan Bonding Treiber Architektur} 
 \end{figure}
 \newpage
-\section{Implementierung der Architektur}
-\subsection{Senden und Empfangen von Paketen}
+\section{Implementierung}
+\subsection{IP Pakete Life Cylce}
 \subsubsection{Erstellen des Eintrags in die IP Routing Tabelle}
-Bevor wir überhaupt testen haben können, ob wir Pakete von Windows empfangen können müssen wir einen Eintrag in den IP Routing Table eintragen. Am Anfang haben wir diese per Hand über das Programm \textbf{route} gemacht. Dieses Bietet ein einfaches Interface um über die Konsole Einträge zu verwalten. Der Befehl, den wir dazu verwendet haben schaut, folgendermaßen aus:
-\begin{program}[H]
-\caption{Route - Beispiel}
-\begin{GenericCode}
-route add 0.0.0.0 mask 0.0.0.0 10.0.0.1 metric 7 if 21  
-\end{GenericCode}
-\end{program}
-Wenn wir uns die IP Routing Tabelle nun anzeigen lassen sehen wir das folgender Eintrag erstellt wurde.
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\textwidth]{ip_routing_table_entry.png}
-    \caption[IP Routing Table Eintrag]{IP Routing Table Eintrag \footnotemark[1]{Vgl. \ref{flasklogo}}} 
-\end{figure}
-In diesem Ausschnitt können wir zwei Einträge sehen. Der erste ist der Eintrag für das Standardgateway das gerade ausgewählt ist und der zweite ist der Eintrag, den wir gerade eben erstellt haben. 
+Um IP Pakete umleiten zu können müssen wir Einträge in den IP Routing Table von Windows einfügen. Wie die Codebase des Multi-Wan Bonding Treibers noch nicht ausgereift genug war, haben wir diese Einträge über die Konsole mithilfe des \textbf{route} Befehls eingefügt. Um Pakete in unser Virtual Network Interface Card (VNIC) umleiten zu können müssen wir eine \textbf{default route} erstellen. Als Gateway stellen wir dann die IP-Adresse der VNIC des Mulit-Wan Bonding Servers und als Schnittstelle wählen wir die IP-Adresse der VNIC von unserem Mulit-Wan Bonding Treiber. Als Metrik haben wir die kleinste Metrik gewählt, die über den route Befehl erstellt werden kann. Dadurch erhalten wir einen Eintrag, der ungefähr so ausschaut:
+
+\begin{center}
+\begin{tabular}{| c | c | c | c | c |}
+    \hline
+    Netzwerkziel & Netzwerkmaske & Gateway & Schnittstelle & Metrik \\
+    \hline
+    0.0.0.0 & 0.0.0.0 & 10.0.0.1 & 10.0.0.2 & 7 \\
+    \hline
+\end{tabular}
+\end{center}
+Wobei \textit{10.0.0.1} die IP-Adresse des VNICs des Mulit-Wan Bonding Servers und \textit{10.0.0.2} die IP-Adresse des VNCIs unseres Multi-Wan Bonding Treibers ist.
 \newline
 \newline
-Wir können sehen das beide Eintrage als \textbf{Netzwerkziel} und als \textbf{Netzwerkmaske} die gleichen Werte haben. Das ist so, weil beide Einträge die gleiche Gruppe von IP Paketen umleiten wollen. Routen die als Netzwerkziel und als Netzwerkmaske \textbf{0.0.0.0} haben werden Standard Routen angesehen, das heißt das alle IP Pakete, die nicht von einer genaueren Route umgeleitet werden, von dieser Regel beeinflusst wird\footnote[1]{\url{https://www.techopedia.com/definition/2184/default-gateway}, 2021-02-01 17:58 MEZ}.
+Später in der Entwicklung haben aber eine programmatische Lösung gebraucht, weil wir nicht davon ausgehen können, dass alle Endnutzer genügend technische Kenntnisse haben, um die Route selber einzustellen. Deswegen benutzen wir Funktionen aus der iphlpapi.h\footnote{\url{https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/}, 2021-02-01 17:14 MEZ} Bibliothek. Diese stellt Funktionen zu auslesen und bearbeiten des IP Routing Tables zur Verfügung.
 \newline
 \newline
-Die Gateway-IP-Adresse gibt an welche Adresse die IP-Pakete weitergeleitet werden sollen. In dem Fall von unserem Eintrag ist das die IP-Adresse des Virtuellen Netzwerkadapters. Bei dem Eintrag, der bereits vorhanden ist, ist die interne IP-Adresse meines Routers eingetragen.
+Bevor wir eine Verbindung mit dem Server aufbauen lesen wir also den IP Routing Table aus und speichern alle derzeitigen Standardgateways zwischen und löschen diese danach aus der Tabelle. Nachdem jetzt keine Standardgateways existieren, haben wir das Problem, dass die IP Pakete, die wir zu unserem Server senden wollen, nicht mehr wissen wohin sie weitergeleitet werden sollen. Das heißt das alle unsere Pakete nicht zu dem Router weitergeleitet werden. Dadurch kommen diese IP Pakete nicht mehr bei unserem Mulit-Wan Bonding Server an. Um dies zu verhindern, erstellen wir neue Einträge, die als Netzwerkziel die IP unseres Servers haben und als Gateway stellen wir die IP-Adresse des VNICs des Mulit-Wan Bonding Servers ein. Dadurch stellen wir sicher, dass die Pakete die von unserem Multi-Wan Bonding Treiber verschickt werden, einen Weg finden wie sie über den Router zu unserem Server kommen. Nachdem wir diese Einträge eingefügt haben, erstellen wir einen neuen Eintrag der als Netzwerkziel und als Netzmaske die Standard Route repräsentieren und mit dem Gatway als die IP-Adresse die wir unserer Wintun VNIC zugewiesen haben. Dadurch werden alle Pakete die nicht von einer Route mit einer niedrigeren Metrik oder einer Route die eine höhere Genauigkeit bei dem Netzwerkziel oder Netzwerkmaske aufweist von dieser Route an unsere VNIC weitergeleitet.
 \newline
 \newline
-Die Schnittstelle gibt an über welchen Netzwerkadapter die Pakte verschickt. Bei unserem Eintrag ist es \textit{10.0.0.3}, weil dies die Adresse ist die unser Wintun Netzwerkadapter zugewiesen bekommen hat. Beim anderen Eintrag ist die IP-Adresse zu sehen die zurzeit als Standardgateway eingestellt ist. 
+Wenn die Verbindung wieder abgebaut werden soll, löschen wir den von uns erstellten Einträge wieder, lesen das zwischengespeicherte Standardgateway wieder aus und fügen es in den IP Routing Table ein.
 \newline
 \newline
-Als Letztes muss noch die Metrik eingestellt werden. Diese bestimmt welcher Eintrag verwendet wird. Die Metrik wird benutzt, wenn es für ein IP-Paket mehrere passende Einträge gibt. In solch einem Fall wird die Metrik mit der geringsten Metrik gewählt\footnote[2]{\url{https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/route_ws2008}, 2021-01-16 23:30 MEZ}.
-\newpage
-Später in der Entwicklung haben aber eine programmatische Lösung gebraucht, weil wir nicht davon ausgehen können, dass alle Endnutzer genügend technische Kenntnisse haben, um die Route selber einzustellen. Deswegen benutzen wir Funktionen aus der \textbf{iphlpapi.h}\footnote[1]{\url{https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/}, 2021-02-01 17:14 MEZ} Bibliothek. Diese stellt Funktionen zu auslesen und bearbeiten des IP Routing Tables zur Verfügung.
-\newline
-\newline
-Bevor wir eine Verbindung mit dem Server aufbauen lesen wir also den IP Routing Table aus und speichern das derzeitige Standardgateway zwischen und löschen es danach aus der Tabelle. Jetzt wird ein neuer Eintrag erstellt, der alle IP-Pakete durch unseren Netzwerkadapter an unseren Server schickt.
-\newline
-\newline
-Wenn die Verbindung wieder abgebaut werden soll, löschen wir den von uns erstellten Eintrag wieder, lesen das zwischengespeicherte Standardgateway wieder aus und fügen es in den IP Routing Table ein.
-\newline
-\newline
-Um sicherzustellen das, selbst wenn das Programm unerwartet abstürzt, das alte Standardgateway wieder hergestellt werden kann, speichern wir dieses in einer Datei. Diese wird beim Start des Programms ausgelesen und wenn kein Standardgateway gesetzt ist, wird dies aus der Datei wieder hergestellt. Um zu verhindern, dass das Standardgateway neu gesetzt wird, obwohl kein Absturz geschehen ist, wird die Datei nach einem erfolgreichen Verbindungsabbau wieder gelöscht.
+Um sicherzustellen das in dem Fall, dass das Programm unerwartet abstürzt, das alte Standardgateway wieder hergestellt werden kann, speichern wir dieses in einer Datei. Diese wird beim Start des Programms ausgelesen und wenn wir erkennen das kein Standardgateway gesetzt ist, stellen wir dieses mit den Informationen aus der Datei wieder her. Um zu verhindern, dass das Standardgateway neu gesetzt wird, obwohl kein Absturz geschehen ist, wird die Datei nach einem erfolgreichen Verbindungsabbau wieder gelöscht.
+
+
 \subsubsection{Empfangen von Paketen}
-Nachdem jetzt sichergestellt wurde, dass alle IP-Pakete, die nicht an das interne Netzwerk gerichtet sind, an unser TUN Netzwerkadapter gesendet werden. Müssen wir diese auslesen und zur Weiterverarbeitung zwischenspeichern.
+Nachdem jetzt sichergestellt wurde, dass alle IP-Pakete, die nicht an das interne Netzwerk oder unseren Server gerichtet sind, an unser VNIC gesendet werden. Müssen wir diese auslesen und zur Weiterverarbeitung zwischenspeichern.
 \newline
 \newline
-Hierzu erstellen wir, falls noch keiner Vorhanden ist, einen virtuellen Wintun Netzwerkadapter. Dieser Netzwerkadapter spiegelt ein TUN Treiber wider, das bedeutet das er OSI Layer 3 Pakete weiterverarbeitet. Der Treiber läuft im Kernal Mode\footnote[1]{\url{https://git.zx2c4.com/wintun/tree/driver/wintun.inf}, 2021-02-02 18:25 MEZ} verarbeitet aber Pakete selber nicht, sondern speichert diese in einem Ring Puffer zwischen\footnote[2]{\url{https://git.zx2c4.com/wintun/tree/driver/wintun.c}, 2021-02-02 18:24 MEZ} wo sie von einem sich im Users Mode befindenden Programm weiterverarbeitet werden können. Das hat den großen Vorteil das wir keinen Low Level Windows Code schreiben müssen, wir können davon ausgehen, dass der Treiber stabil läuft und die Integrität des Betriebssystems nicht negativ beeinflusst. Jedoch hat es den Nachteil das der Code, der für das Verarbeiten von dem IP Paketen zuständig ist, im User Mode läuft, welcher wesentlich langsamer ist als der Kernel Mode. Weil Programme die im User Mode laufen immer wieder auf Funktionen zugreifen müssen die nur im Kernel Mode ausgeführt werden können, müssen diese dann einen Ressourcen aufwendigen Context Switch durchführen\footnote[3]{\url{https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/user-mode-and-kernel-mode}, 2021-02-02 18:32 MEZ}.
+Hierzu erstellen wir, falls noch keiner Vorhanden ist, einen virtuellen Wintun Netzwerkadapter. Dieser Netzwerkadapter spiegelt ein TUN Treiber wider, das bedeutet das er OSI Layer 3 Pakete weiterverarbeitet. Der Treiber läuft im Kernal Mode\footnote{\url{https://git.zx2c4.com/wintun/tree/driver/wintun.inf}, 2021-02-02 18:25 MEZ} verarbeitet aber Pakete selber nicht, sondern speichert diese in einem Ring Puffer zwischen\footnote{\url{https://git.zx2c4.com/wintun/tree/driver/wintun.c}, 2021-02-02 18:24 MEZ} wo sie von einem sich im Users Mode befindenden Programm weiterverarbeitet werden können. Das hat den großen Vorteil das wir keinen Low Level Windows Code schreiben müssen, wir können davon ausgehen, dass der Treiber stabil läuft und die Integrität des Betriebssystems nicht negativ beeinflusst. Jedoch hat es den Nachteil das der Code, der für das Verarbeiten von dem IP Paketen zuständig ist, im User Mode läuft, welcher wesentlich langsamer ist als der Kernel Mode. Weil Programme die im User Mode laufen immer wieder auf Funktionen zugreifen müssen die nur im Kernel Mode ausgeführt werden können, müssen diese dann einen Ressourcen aufwendigen Context Switch durchführen\footnote{\url{https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/user-mode-and-kernel-mode}, 2021-02-02 18:32 MEZ}.
 \newline
 \newline
-Nachdem wir sichergestellt haben, dass es unseren Netzwerkadapter gibt versuchen wir einen Handle auf ihn zu bekommen. In Windows repräsentiert ein Handle eine Ressource auf das ein Programm zugreifen will\footnote[1]{\url{https://docs.microsoft.com/en-us/windows/win32/sysinfo/about-handles-and-objects}, 2021-02-02 18:41 MEZ}. Das heißt durch Handles hat Windows einen Weg sicherzustellen das zum Beispiel auf Dateien nicht zweimal schreiben Zugegriffen wird. Wir fordern also einen Handle für unseren Netzwerkadapter an um Operationen an ihm durchführen zu können.
+Nachdem wir sichergestellt haben, dass es unseren Netzwerkadapter gibt versuchen wir einen Handle auf ihn zu bekommen. In Windows repräsentiert ein Handle eine Ressource auf das ein Programm zugreifen will\footnote{\url{https://docs.microsoft.com/en-us/windows/win32/sysinfo/about-handles-and-objects}, 2021-02-02 18:41 MEZ}. Das heißt durch Handles hat Windows einen Weg sicherzustellen das zum Beispiel auf Dateien nicht zweimal schreiben Zugegriffen wird. Wir fordern also einen Handle für unseren Netzwerkadapter an um Operationen an ihm durchführen zu können.
 \newline
 \newline
 Mit dem Adapter Handle, den wir angefordert haben, können wir diesen nun einstellen so wie wir ihn benötigen. Wir stellen also die IP-Adresse, die uns zugewiesen wurde und die dazugehörigen Subnetbits ein. Danach ist der Netzwerkadapter fertig eingestellt und könnte theoretisch Daten empfangen.
@@ -122,6 +123,9 @@ Wir können jetzt Pakete von unseren Netzwerkadapter empfangen und diese dann an
 \newline
 \newline
 Der Erste ist, Pakete die Empfangen wurden direkt über einen davor erstellten Socket zum Server zu schicken.  Dieser Ansatz hat zwar den Vorteil des er simpel und einfach zu implementieren ist. Jedoch überwiegen die Nachteile hier die Vorteile. 
+\newline
+\newline
+Der Erste ist, Pakete die Empfangen wurden direkt über einen davor erstellten Socket zum Server zu schicken.  Dieser Ansatz hat zwar den Vorteil des er simpel und einfach zu implementieren ist. Jedoch überwiegen die Nachteile hier die Vorteile.
 \newline
 \newline
 Ein großer Nachteil ist das, wenn wir ein Paket empfangen und dies an sofort verarbeiten und über einen Socket versenden, keine weiteren Pakete empfangen können bis dieses Paket abgesendet wurde. Der Grund dafür das in diesem Fall der ganze Prozess nur in einem einzigen Thread ablaufen würde und dadurch Zeit, die er zum Empfangen verwenden könnte, für das verarbeiten und senden verwendet.
