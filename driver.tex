@@ -119,16 +119,14 @@ Mit dem Adapter Handle, den wir angefordert haben, können wir diesen nun einste
 \newline
 Der Netzwerkadapter ist aber noch nicht “eingeschalten” dazu müssen wir eine Session erstellen. In dieser Session können wir einstellen wie groß die Ring Puffer im Treiber sind. Wir haben uns bei der Größe für die maximal von Wintun zugelassene Größe von 64 Mebibyte entschieden. Mithilfe dieser Session können wir, dann anfangen die Pakete, die unser Netzwerkadapter empfangen hat, zu übernehmen und diese weiterzuverarbeiten.
 \subsubsection{Weiterverarbeiten von Paketen}
-Wir können jetzt Pakete von unseren Netzwerkadapter empfangen und diese dann an unser Programm übertragen. Jetzt müssen wir das Paket zwischenlagern und weiterverarbeiten. Dafür haben wir zwei verschiedene Lösungswege ausgedacht. 
+Wir können jetzt Pakete von unseren Netzwerkadapter empfangen und diese dann an unser Programm übertragen. Jetzt müssen wir das Paket zwischenspeichern und weiterverarbeiten. Dabei sind wir auf zwei verschiedene Lösungswege gestoßen.
 \newline
 \newline
-Der Erste ist, Pakete die Empfangen wurden direkt über einen davor erstellten Socket zum Server zu schicken.  Dieser Ansatz hat zwar den Vorteil des er simpel und einfach zu implementieren ist. Jedoch überwiegen die Nachteile hier die Vorteile. 
+Der erste Weg ist es die sammeln und versenden der IP Pakete auf dem gleichen Thread. Hierbei würde ein IP Paket, das derweil noch im Wintun internen Puffer gespeichert ist, aus diesem in den Mulit-Wan Bonding Treiber geladen werden. Nachdem das IP Paket Erfolgreich geladen wurde, wird es wiederum in den Puffer eines Sockets geladen und zum Multi-Wan Bonding Server geschickt. 
 \newline
-\newline
-Der Erste ist, Pakete die Empfangen wurden direkt über einen davor erstellten Socket zum Server zu schicken.  Dieser Ansatz hat zwar den Vorteil des er simpel und einfach zu implementieren ist. Jedoch überwiegen die Nachteile hier die Vorteile.
-\newline
-\newline
-Ein großer Nachteil ist das, wenn wir ein Paket empfangen und dies an sofort verarbeiten und über einen Socket versenden, keine weiteren Pakete empfangen können bis dieses Paket abgesendet wurde. Der Grund dafür das in diesem Fall der ganze Prozess nur in einem einzigen Thread ablaufen würde und dadurch Zeit, die er zum Empfangen verwenden könnte, für das verarbeiten und senden verwendet.
-\newline
-\newline
-Also haben wir uns dazu entschieden alle diese Schritte in eigene Threads auszulagern. Das heißt wir haben eigene Threads zum Senden, Empfangen und Verarbeiten von Paketen. Damit wir mit mehreren Threads performant arbeiten können brauchen wir einen Lösung, um eine Kommunikation zwischen den einzelnen Threads aufzubauen.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{Verarbeiten_von_IP_Paketen_in_einem_Thread.png}
+    \caption[Verarbeitung von IP Paketen in einem Thread]{Verarbeitung von IP Paketen in einem Thread} 
+\end{figure}
+\ \\
