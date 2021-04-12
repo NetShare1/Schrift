@@ -23,7 +23,7 @@ Wenn jetzt eine Applikation mit einem Gerät interagieren will, sendet es zuerst
     \label{windows-driver-stack} 
 \end{figure}
 \noindent
-\subsubsection{User vs. Kernel Mode in Windows}
+\subsection{User vs. Kernel Mode in Windows}
 Unter Windows können Programme in zwei verschiedenen Modi laufen. Der erste ist der User Mode in dem alle Applikationen laufen und der zweite in dem die wichtigsten Treiber und Prozesse des Betriebssystem laufen.\footnote[3]{\cite[Vgl.][]{21}}
 \\\\
 Weil der Kernel Mode in einer geringeren Sicherheitsstufe angesiedelt ist, als der User Mode, hat dieser Hardware mäßig mehr Rechte. Dadurch kann Windows garantieren das Programme die im User Mode laufen nur das machen, was ihnen auch erlaubt ist. \footnote[4]{Siehe Fußnote 3}
@@ -32,12 +32,12 @@ Programmen im User Mode wird ein virtueller Adressbereich zugeordnet. Dieser Adr
 \newpage
 Programme im Kernel Mode teilen sich wiederum einen Adressbereich mit dem Windows Kernel. Das bedeutet, dass diese Programme die gleichen Rechte haben wie Windows. Dadurch haben diese Programme nicht die Vorteile die sie im User Mode genießen. Es kann also leicht passieren das Programme unabsichtlich auf einen Speicherbereich zugreifen, auf den sie nicht zugreifen wollten und damit entweder ein anderes Programm oder sogar das ganzen System zum Absturz bringen. Aus diesem Grund müssen Treiber die im Kernel Mode laufen extrem gut getestet werden, um sicherzustellen keine Memory Leaks oder Speicherzugriffsverletzung auftreten können. \footnote[1]{\cite[Vgl.][]{21}}
 
-\subsubsection{I/O request packets}
+\subsection{I/O request packets}
 Ein I/O request packet oder IRP in kurz, sind die Art von Anfragen, die am meisten an Funktionstreiber gerichtet werden. Wenn ein IRP gesendet wird, wird dieser normalerweise von mehreren Treibern im Stack bearbeitet bevor er an seinem Ziel Treiber ankommt.\footnote[2]{\cite[Vgl.][]{23}}
 \\\\
 Ein IRP besteht hauptsächlich aus einem Buffer und verschiedenen Flags die beschreiben was für eine Operation der Treiber ausführen sollte.\footnote[3]{\cite[Vgl.][]{22}}
 
-\subsubsection{Geräte Objekte, Geräte Knoten und Geräte Stacks}
+\subsection{Geräte Objekte, Geräte Knoten und Geräte Stacks}
 In Windows wird jedes Gerät durch einen Geräte Knoten in den Plug and Play (PnP) Geräte Baum abgebildet. Jedes Treiber ist mit einem Geräte Objekt verbunden und diese Geräte Objekte sind dann in einem Stack angeordnet. Jedes Gerät hat wiederum seinen eigenen Geräte Stack.\footnote[4]{\cite[Vgl.][]{24}}
 \\\\
 Der Geräte Baum wird beim Start von Windows aufgebaut. In Abbildung \ref{windows-plug-and-play-tree} kann man sehen, dass es mehrere Eltern Kind Beziehungen zwischen den einzelnen Geräte Knoten gibt. Die entstehen dadurch das der Root Knoten alle Knoten, die mit ihm Verbunden sind, dazu auffordert alle Knoten die mit diesen Knoten verbunden sind aufzubauen. Dieser Prozess geht so lange, bis alle Knoten aufgebaut wurden. In der Abbildung \ref{windows-plug-and-play-tree} ist also zu sehen, dass der PCI Bus Knoten mehrere andere Knoten aufgebaut hat, wie zum Beispiel den Audio Controller der wiederum ein Audio Device aufgebaut hat. Durch diese Art des Ausbauen und Speichern der Geräte Knoten weiß Windows immer welchen weg IRPs Requests gehen müssen, um an ihrem Ziel Gerät anzukommen.\footnote[5]{Siehe Fußnote 4}
@@ -60,7 +60,7 @@ Jeder dieser Geräte Knoten besteht wiederum aus mehreren Geräte Objekten/Treib
 
 \newpage
 
-\subsection{Windows Netzwerk Architektur}
+\section{Windows Netzwerk Architektur}
 Die Netzwerkarchitektur in Windows ist nach den OSI Modell aufgebaut. Das OSI Modell besteht aus sieben Schichten die jeweils eine andere unabhängige Aufgabe. Für unseren Treiber sind jedoch nur die ersten drei Schichten von Bedeutung.\footnote[1]{\cite[Vgl.][]{27}}
 \\\\
 Die erste Schicht ist die Bitübertragungsschicht, die für das empfangen und versenden von Bits über ein physisches Medium zuständig sind. Physische Medien sind hierbei zum Beispiel Patchkabel, Funknetze und andere. Für diese Schicht sind in Windows die Network Interface Cards (NICs) zuständig.\footnote[2]{Siehe Fußnote 1}
@@ -275,7 +275,7 @@ Der Multi-WAN Bonding fähigen Treiber wird außerdem in einen Fehlerzustand ver
 Eine Frage, die wir uns stellen mussten, war wie wollen wir das sich unser Multi-WAN Bonding fähigen Treiber verhaltet, wenn mehr Daten versendet werden als die einzelnen Internetverbindungen bereitstellen können. Nach längerer Überlegung sind wir zu der Entscheidung gekommen, dass wir Pakete wegwerfen ab dem Moment wo der interne Puffer voll wird. Es ist in dieser Situation eigentlich egal, ob wir in unserem Multi-Wan Bonding fähigen Treiber die Pakete wegwerfen oder nicht. Wenn der interne Puffer in einem Socket voll wird, würde dieser auch die eintreffenden IP Pakete wegwerfen. Das bedeutet, dass die IP Pakete sowieso weggeworfen werden würden.
 \\\\
 In der gegen Situation, wenn zu viele IP Pakete eintreffen, haben wir gar nicht die Möglichkeit etwas an dem Standardverhalten von NICs zu beeinflussen. Wenn der interne Puffer einer NIC voll ist, wirft dieser die neu ankommenden IP Pakete weg, bevor wir diese überhaupt zu Gesicht bekommen würden.
-\paragraph{State Management}
+\subsubsection{1}{State Management}
 \ \\\\
 In unserem Multi-Wan Bonding fähigen Treiber gibt es insgesamt drei verschiedene Klasse die Konfigurationen halten. Die Konfiguration Klasse des höchsten Levels ist die Applikations Konfiguration. Diese Konfiguration ist eine Singleton Klasse und kann in der ganzen Applikation abgerufen werden. Dieses Objekt enthält dann auch die niedrigeren Levels an Konfigurationsobjekten.
 \\\\
@@ -284,7 +284,7 @@ Das mittlere Level ist das Runtime Konfiguration Objekt dieses enthält Informat
 Das niedrigste Level sind die UDP-Socket Konfigurationsobjekte. Diese Konfiguration Objekte werden auch während dem Start-up Prozess erstellt und enthalten Informationen die für die UDP Sender und Empfänger Threads wichtig sind. Über diese Konfigurationsobjekte ist es außerdem möglich auf das Runtime Konfiguration Objekt zuzugreifen. 
 \\\\
 Das Runtime Konfiguration Objekt und die UDP-Socket Konfigurationsobjekte werden beide in dem Shutdown Prozess des Treibers gelöscht.
-\paragraph{Konfiguration}
+\subsubsection{Konfiguration}
 \ \\\\
 Das Konfigurieren des Multi-Wan Bonding fähigen Treibers erfolgt über einen in den Treiber eingebauten TCP Server. Dieser Server akzeptiert Verbindungen vom Localhost. Über diese Verbindung kann der Server über drei verschiedene arten konfiguriert werden:
 \\
