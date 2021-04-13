@@ -4,21 +4,21 @@
 \section{IP Routing Table}
 Der IP Routing Table oder Routing Table ist eine Tabelle die alle Hosts, die an einem Netzwerk angeschlossen sind aufbauen. Diese Tabelle wird von dem Betriebssystem verwendet um IP Pakete weiter oder umzuleiten. Durch diese Informationen ist es außerdem möglich die Topologie des Netzwerkes, in dem sich der Host befindet, zu bestimmen.\footnote[1]{\cite[Vgl.][]{2}}
 \\\\
-Einträge in dem Routing Table können entweder manuell, in Form von statischen Routen oder dynamisch über Routing Protokolle erstellt werden.\footnote[2]{Siehe Fußnote 1}
+Einträge in dem Routing Table können entweder manuell, in Form von statischen Routen oder dynamisch über Routing Protokolle erstellt werden.$^{1}$
 \\\\
-Ein Eintrag des Routing Table unter Linux und unter Windows hat folgende 5 Attribute: ein Netzwerkziel, eine Netzwerkmaske, ein Gateway, eine Schnittstelle und eine Metrik.\footnote[3]{Siehe Fußnote 1}
+Ein Eintrag des Routing Table unter Linux und unter Windows hat folgende 5 Attribute: ein Netzwerkziel, eine Netzwerkmaske, ein Gateway, eine Schnittstelle und eine Metrik.$^{1}$
 \\\\
-Das Netzwerkziel und die Netzwerkmaske zusammen beschreiben, an welches Netzwerk ein IP Paket gerichtet sein muss, um von diesem Eintrag beeinflusst zu werden. Hier gibt es jedoch eine besondere Einstellung, wenn das Netzwerkziel als auch die Netzwerkmaske nur aus Nullen besteht. Diese Einträge werden als default Routen bezeichnet. Default Routen beeinflussen alle Pakete, bei denen folgendes \textbf{nicht} zutrifft\footnote[4]{Siehe Fußnote 1}: 
+Das Netzwerkziel und die Netzwerkmaske zusammen beschreiben, an welches Netzwerk ein IP Paket gerichtet sein muss, um von diesem Eintrag beeinflusst zu werden. Hier gibt es jedoch eine besondere Einstellung, wenn das Netzwerkziel als auch die Netzwerkmaske nur aus Nullen besteht. Diese Einträge werden als default Routen bezeichnet. Default Routen beeinflussen alle Pakete, bei denen folgendes \textbf{nicht} zutrifft$^{1}$: 
 \\
 \begin{itemize}
     \item Es gibt keinen anderen default Routen mit einer niedrigeren Metrik
     \item Pakete wurden vorher noch nicht von einem spezifischeren Eintrag umgeleitet.
 \end{itemize}
 \ \\
-Das Gateway beschreibt den nächsten hop. Genauer gesagt spiegelt es die IP-Adresse des Hosts wieder, um das IP-Paket umgeleitet werden muss um in das Zielnetzwerk, oder in ein Netzwerk, das mit dem Zielnetzwerk verbunden ist, zu gelangen.\footnote[5]{Siehe Fußnote 1}
+Das Gateway beschreibt den nächsten hop. Genauer gesagt spiegelt es die IP-Adresse des Hosts wieder, um das IP-Paket umgeleitet werden muss um in das Zielnetzwerk, oder in ein Netzwerk, das mit dem Zielnetzwerk verbunden ist, zu gelangen.$^{1}$
 \\\\
-Die Metrik gibt an welcher Eintrag verwendet werden soll, wenn 2 Einträge gleiche Werte im Netzwerkziel und in der Netzwerkmaske haben. Sie gibt bei dynamischen Routen an wie viel hops das IP Paket braucht, um beim Gateway anzukommen. Deswegen wird auch die kleinere Metrik bevorzugt, weil weniger hops in der Regel weniger Latenz bedeutet.\footnote[6]{Siehe Fußnote 1}
-\\\\
+Die Metrik gibt an welcher Eintrag verwendet werden soll, wenn mehrere Einträge gleiche Werte im Netzwerkziel und in der Netzwerkmaske haben. Sie gibt bei dynamischen Routen an wie viel hops das IP Paket braucht, um beim Gateway anzukommen. Deswegen wird auch die kleinere Metrik bevorzugt, weil weniger hops in der Regel weniger Latenz bedeutet.$^{1}$
+\newpage
 Die Schnittstelle gibt an über welche Network Interface Card (NIC) das IP Paket geleitet werden muss damit es das Gateway erreichen kann.\footnote[1]{\cite[Vgl.][]{2}}
 \\\\
 Eine Routing Tabelle könnt also so aussehen:
