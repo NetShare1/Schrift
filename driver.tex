@@ -24,7 +24,7 @@ Wenn jetzt eine Applikation mit einem Gerät interagieren will, sendet sie zuers
 \end{figure}
 \noindent
 \subsection{User vs. Kernel Mode in Windows}
-Unter Windows können Programme in zwei verschiedenen Modi laufen. Der erste ist der User Mode in dem alle Applikationen laufen und der zweite ist der Kernel Mode in dem die wichtigsten Treiber und Prozesse des Betriebssystem laufen.\footnote[3]{\cite[Vgl.][]{21}}
+Unter Windows können Programme in zwei verschiedenen Modi laufen. Der erste ist der User Mode in dem alle Applikationen laufen und der zweite ist der Kernel Mode in dem die wichtigsten Treiber und Prozesse des Betriebssystems laufen.\footnote[3]{\cite[Vgl.][]{21}}
 \\\\
 Weil der Kernel Mode in einer geringeren Sicherheitsstufe angesiedelt ist, als der User Mode, hat dieser Hardware mäßig, mehr Rechte. Dadurch kann Windows garantieren, dass Programme die im User Mode laufen nur das machen, was ihnen auch erlaubt ist.$^{3}$
 \\\\
@@ -32,7 +32,7 @@ Programmen im User Mode wird ein virtueller Adressbereich zugeordnet. Dieser Adr
 
 \newpage
 
-Programme im Kernel Mode teilen sich wiederum einen Adressbereich mit dem Windows Kernel. Das bedeutet, dass diese Programme die gleichen Rechte haben wie Windows. Dadurch haben diese Programme nicht die Vorteile die sie im User Mode genießen. Es kann also leicht passieren das Programme unabsichtlich auf einen Speicherbereich zugreifen, auf den sie nicht zugreifen sollten und damit entweder ein anderes Programm oder sogar das ganzen System zum Absturz bringen. Aus diesem Grund müssen Treiber die im Kernel Mode laufen extrem gut getestet werden, um sicherzustellen keine Memory Leaks oder Speicherzugriffsverletzung auftreten können. \footnote[1]{\cite[Vgl.][]{21}}
+Programme im Kernel Mode teilen sich wiederum einen Adressbereich mit dem Windows Kernel. Das bedeutet, dass diese Programme die gleichen Rechte haben wie Windows. Dadurch haben diese Programme nicht die Vorteile die sie im User Mode genießen. Es kann also leicht passieren das Programme unabsichtlich auf einen Speicherbereich zugreifen, auf den sie nicht zugreifen sollten und damit entweder ein anderes Programm oder sogar das ganzen System zum Absturz bringen. Aus diesem Grund müssen Treiber die im Kernel Mode laufen extrem gut getestet werden, um sicherzustellen das keine Memory Leaks oder Speicherzugriffsverletzungen auftreten können. \footnote[1]{\cite[Vgl.][]{21}}
 
 \subsection{I/O request packets}
 Ein I/O Request Packet oder IRP in kurz, sind die Art von Anfragen, die am meisten an Funktionstreiber gerichtet werden. Wenn ein IRP gesendet wird, wird dieser normalerweise von mehreren Treibern im Stack bearbeitet, bevor er an seinem Ziel Treiber ankommt.\footnote[2]{\cite[Vgl.][]{23}}
@@ -51,7 +51,7 @@ Der Geräte Baum wird beim Start von Windows aufgebaut. In Abbildung \ref{window
     \label{windows-plug-and-play-tree} 
 \end{figure}
 \noindent
-Jeder dieser Geräte Knoten besteht wiederum aus mehreren Geräte Objekten/Treiber Paaren. Diese geordnete Liste an Geräte Objekten und Treiber ergeben an den Geräte Stack für diesen Geräte Knoten. In Abbildung \ref{windows-device-object} kann gesehen werden das der Geräte Knoten PCI Bus einen Geräte Stack hat der aus zwei Geräte Objekt/Treiber Paaren besteht. Das erste Geräte Objekt ist mit dem Treiber Acpi.sys und das zweite mit dem Treiber Pci.sys verbunden.\footnote[1]{\cite[Vgl.][]{24}}
+Jeder dieser Geräte Knoten besteht wiederum aus mehreren Geräte Objekten/Treiber Paaren. Diese geordnete Liste an Geräte Objekten und Treiber ergeben den Geräte Stack für diesen Geräte Knoten. In Abbildung \ref{windows-device-object} kann gesehen werden das der Geräte Knoten PCI Bus einen Geräte Stack hat der aus zwei Geräte Objekt/Treiber Paaren besteht. Das erste Geräte Objekt ist mit dem Treiber Acpi.sys und das zweite mit dem Treiber Pci.sys verbunden.\footnote[1]{\cite[Vgl.][]{24}}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.4\textwidth]{device-stack.png}
@@ -63,6 +63,7 @@ Jeder dieser Geräte Knoten besteht wiederum aus mehreren Geräte Objekten/Treib
 \newpage
 
 \section{Windows Netzwerk Architektur}
+
 Die Netzwerkarchitektur in Windows ist nach den OSI Modell aufgebaut. Das OSI Modell besteht aus sieben Schichten, die jeweils eine andere unabhängige Aufgabe haben. Für unseren Treiber sind jedoch nur die ersten drei Schichten von Bedeutung.\footnote[1]{\cite[Vgl.][]{27}}
 \\\\
 Die erste Schicht ist die Bitübertragungsschicht, die für das Empfangen und Versenden von Bits über ein physisches Medium zuständig ist. Physische Medien sind hierbei zum Beispiel Patchkabel oder Funknetze. Für diese Schicht sind in Windows die Network Interface Cards (NICs) zuständig.$^{1}$
@@ -77,7 +78,7 @@ Die zweite Schicht ist die Sicherungsschicht, die aus zwei Unterschichten besteh
 \ \\
 Die MAC Unterschicht wird unter Windows von Miniport Treibern\footnote[3]{\cite[Vgl.][]{25}} verwaltet.$^{1}$
 \\\\
-Die zweite Unterschicht ist die LLC Schicht. Sie ist für eine fast Fehlerfreie Übertragung von Frames über die Bitübertragungsschicht verantwortlich. Die LLC Unterschicht wird in Windows von Protocol Treiber\footnote[5]{\cite[Vgl.][]{26}} verwaltet.$^{1}$
+Die zweite Unterschicht ist die LLC Schicht. Sie ist für eine fast Fehlerfreie Übertragung von Frames über die Bitübertragungsschicht verantwortlich. Die LLC Unterschicht wird in Windows von einem Protocol Treiber\footnote[5]{\cite[Vgl.][]{26}} verwaltet.$^{1}$
 \\\\
 Die dritte Schicht ist die Vermittlungsschicht, diese Schicht schaut welchen Physischen Weg das Paket am besten nehmen sollte um an seinem Ziel in seinem Subnetz zu kommen. Dabei werden folgende Faktoren eingerechnet:
 \\
@@ -255,7 +256,7 @@ Der Thread schläft auch hier so lange keine Pakete vom Multi-Wan Bonding Server
 \\\\
 Nachdem der Thread wieder aufgewacht ist, kopiert dieser alle IP Pakete aus dem Socket in dem ihm zugeordneten internen Puffer. Wenn keine IP Pakete mehr aus dem Socket ausgelesen werden können, schläft der Thread wieder ein und wartet auf neue IP Pakete.
 \subsection{State Management}
-In unserem Multi-Wan Bonding fähigen Treiber gibt es insgesamt drei verschiedene Klasse die Konfigurationen halten. Die Konfiguration Klasse des höchsten Levels ist die Applikations Konfiguration. Diese Konfiguration ist eine Singleton Klasse und kann in der ganzen Applikation abgerufen werden. Dieses Objekt enthält dann auch die niedrigeren Levels an Konfigurationsobjekten.
+In unserem Multi-Wan Bonding fähigen Treiber gibt es insgesamt drei verschiedene Klassen die Konfigurationen halten. Die Konfiguration Klasse des höchsten Levels ist die Applikations Konfiguration. Diese Konfiguration ist eine Singleton Klasse und kann in der ganzen Applikation abgerufen werden. Dieses Objekt enthält dann auch die niedrigeren Levels an Konfigurationsobjekten.
 \\\\
 Das mittlere Level ist das Runtime Konfiguration Objekt dieses enthält Informationen die für alle Sender und Empfänger Threads wichtig sind, wie zum Beispiel: IP-Adresse des Servers, IP-Adresse des Multi-Wan Bonding fähigen Treibers. Diese Konfiguration wird im Start-up Prozess erstellt und an alle Threads verteilt. Diese Konfiguration gibt es auch maximal nur einmal.
 \\\\
@@ -263,7 +264,7 @@ Das niedrigste Level sind die UDP-Socket Konfigurationsobjekte. Diese Konfigurat
 \\\\
 Das Runtime Konfiguration Objekt und die UDP-Socket Konfigurationsobjekte werden beide in dem Shutdown Prozess des Treibers gelöscht.
 \subsection{Konfiguration}
-Das Konfigurieren des Multi-Wan Bonding fähigen Treibers erfolgt über einen in den Treiber eingebauten TCP Server. Dieser Server akzeptiert Verbindungen vom Localhost. Über diese Verbindung kann der Server über drei verschiedene arten konfiguriert werden:
+Das Konfigurieren des Multi-Wan Bonding fähigen Treibers erfolgt über einen in den Treiber eingebauten TCP Server. Dieser Server akzeptiert Verbindungen vom Localhost. Über diese Verbindung kann der Server über drei verschiedene Arten konfiguriert werden:
 \\
 \begin{enumerate}
     \item Über das Versenden von JSON Kommandos
@@ -304,10 +305,10 @@ Worker Log Dateien enthalten alle Logs, die in einem der Worker Threads erstellt
     \item Ein UDP Empfänger Thread
 \end{itemize}
 \ \\
-Jede dieser Dateien wird in einem eigenen Unterordner gespeichert, weil diese Dateien auf eine maximale Größe von 5 Megabyte eingestellt sind. Wenn eine dieser Dateien mehr als 5 Megabyte an speicher verbrauchen würde, wird eine neue Datei erstellt. Dafür haben wir uns entschieden damit diese Datei in einem Textbearbeitungsprogramm geöffnet werden können, ohne das es zu langen Ladezeit kommt.
+Jede dieser Dateien wird in einem eigenen Unterordner gespeichert, weil diese Dateien auf eine maximale Größe von 5 Megabyte eingestellt sind. Wenn eine dieser Dateien mehr als 5 Megabyte an Speicher verbrauchen würde, wird eine neue Datei erstellt. Dafür haben wir uns entschieden damit diese Datei in einem Textbearbeitungsprogramm geöffnet werden kann, ohne das es zu langen Ladezeiten kommt.
 \\\\
 In den Wintun Log Dateien werden alle wichtigen Events die im Wintun Treiber auftreten festgehalten.
 \section{Verhalten bei zu großer Datenübertragung}
-Eine Frage, die wir uns stellen mussten, war wie wollen wir das sich unser Multi-WAN Bonding fähigen Treiber verhaltet, wenn mehr Daten versendet werden als die einzelnen Internetverbindungen bereitstellen können. Nach längerer Überlegung sind wir zu der Entscheidung gekommen, dass wir Pakete wegwerfen ab dem Moment wo der interne Puffer voll wird. Es ist in dieser Situation eigentlich egal, ob wir in unserem Multi-Wan Bonding fähigen Treiber die Pakete wegwerfen oder nicht. Wenn der interne Puffer in einem Socket voll wird, würde dieser auch die eintreffenden IP Pakete wegwerfen. Das bedeutet, dass die IP Pakete sowieso weggeworfen werden würden.
+Eine Frage, die wir uns stellen mussten, war wie wollen wir das sich unser Multi-WAN Bonding fähiger Treiber verhaltet, wenn mehr Daten versendet werden als die einzelnen Internetverbindungen bereitstellen können. Nach längerer Überlegung sind wir zu der Entscheidung gekommen, dass wir Pakete wegwerfen ab dem Moment wo der interne Puffer voll wird. Es ist in dieser Situation eigentlich egal, ob wir in unserem Multi-Wan Bonding fähigen Treiber die Pakete wegwerfen oder nicht. Wenn der interne Puffer in einem Socket voll wird, würde dieser auch die eintreffenden IP Pakete wegwerfen. Das bedeutet, dass die IP Pakete sowieso weggeworfen werden würden.
 \\\\
 In der gegen Situation, wenn zu viele IP Pakete eintreffen, haben wir gar nicht die Möglichkeit etwas an dem Standardverhalten von NICs zu beeinflussen. Wenn der interne Puffer einer NIC voll ist, wirft dieser die neu ankommenden IP Pakete weg, bevor wir diese überhaupt zu Gesicht bekommen würden.
