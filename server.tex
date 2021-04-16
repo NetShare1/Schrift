@@ -1,2 +1,108 @@
-\chapter{Server}
+\chapter{Multi-Wan Bonding Proxy Server}
 \label{cha:Server}
+
+\section{Anforderungen des Multi-Wan Bonding fähigen Proxy Servers}
+Unser Multi-Wan Bonding Proxy Server ist dafür verantwortlich Datenpakete des Windows Treibers zu Empfangen und zusammen zu führen und Antwortpakete aus dem Internet aufzuteilen um die an den Windows Treiber zurück zu senden. Dafür müssen Probleme gelöst werden:
+\\
+\begin{enumerate}
+    \item Sammeln von IP Paketen von mehreren Absendeadressen für das selbe Ziel.
+    \item Aufteilen von IP Paketen aus dem Internet auf mehrere Verbindungen des selben Empfängers.
+    \item NAT Anwenden auf eingehende und Ausgehende IP Pakete.
+\end{enumerate}
+\ \\
+Weiters handelt es sich bei unserem Multi-Wan Bonding Proxy Server um einen Endpunkt für die zu bündelnten Internetverbindungen. Aufgeteilte Datenpakete treffen von verschiedenen Verbindungen beim Server ein und werden wieder zu einem einzelnen Datenstrom zusammengeführt. Antworten an unseren Proxy Server werden ebenfalls entsprechend wieder aufgeteilt und an die verschiedenen WAN-Anbindungen des Nutzers gesendet. 
+\\\\
+Außerdem müssen gewisse Standards von Performance, Stabilität und Ressourcenanforderungen eingehalten werden. Hierbei gilt:
+\\
+\begin{enumerate}
+    \item Maximale prozentuale CPU Auslastung von 5 {\%}, bei einer 100 Mbit/s Übertragungsrate auf einem AMD Ryzen 7 3700X
+    \item Nicht mehr als 300 Megabyte RAM bedarf höchstens.
+\end{enumerate}
+
+\section{Server Infrastruktur}
+\subsection{Betriebssystem}
+Wir haben uns bei der Wahl des Server Betriebsystems für Linux entschieden. Um genau zu sein für Debian 8. 
+Dafür gibt es einige Gründe:
+\\
+\begin{enumerate}
+    \item Der Linux Kernel besitzt bereits Standardmäßig einen TUN/TAP Treiber was die Entwicklung des Servers um einiges vereinfacht. Bei Windows müsste man erst einen eigenen Treiber schreiben bzw. eine externe Bibliothek verwenden um einen virtuellen Netzwerkadapter zu erstellen. Dies ist unter Linux nicht notwendig.
+    \item Mittels iptables ist es nur ein minimaler Aufwand NAT auf einen Netzwerkadapter anzuwenden. 
+    \item Debian ist im vergleich zu Windows um einiges "leichter" damit sinken die Leistungsanforderungen an das Hostsystem erheblich. Debian benötigt Beispielsweiße keinen Desktop. Der Proxy Server selbst ist auch sehr Leistungsschonend weshalb hier schon ein älterer Raspberry PI ausreichen würde.
+\end{enumerate}
+\ \\
+Es gibt aber viele Linux distributionen die diese Funktionalitäten haben. Warum haben wir uns also speziell für Debian 8 entschieden? Die beliebtesten Serverbetriebsysteme sind aktuell Debian, Ubuntu, CentOS und Windows ohne spezielle Reinfolge. Die entscheidung viel auf Debian weil es sich nicht nur um eine der am weitesten verbreiteten Distributionen handelt sondern auch weil es viele andere Distributionen gibt die auf Debian aufbauen. Ubuntu ist eine davon. Dies erlaubt es unserem Server auf einer vielzahl an Servern ohne hohem Aufwand zu laufen. Wir sind uns aber ziemlich sicher das es auch unter anderen Linux Distributionen keine großen Probleme geben sollte sofern man den Source-Code extra für diese kompiliert.
+
+\subsection{Hardware}
+Die Anforderungen an die Hardware sind minimal. Selbst ein schwaches Hostsystem kann unseren  Proxy Server ohne Probleme betreiben. 1GB Arbeitsspeicher ist mehr als genügend und mit 2GHz CPU Takt sollten bereits höhere Datenübertragungsraten ohne Probleme möglich sein. 
+\\\\ 
+Die höchste Relevanz für die Leistung unseres Proxy Servers hat die single Core Leistung des Rechners. Besonders wenn Datenraten von über 100Mbit/s das Ziel sind sollte man darauf achten.
+\\\\
+Die Internetanbindung ist auch von besonders hoher Relevanz. Die Summer aller mit dem Server verbundenen Nutzer kann zusammen nie eine höhere Übertragungsrate als der Hastrechner haben. 
+\\\\
+Festplattenspeicher wird praktisch keiner benötigt. Schon ein paar MB sind ausreichend um den Server in Betrieb zu nehmen. Vorrausgesetzt es werden keine Logfiles gespeichert.
+
+
+\section{Kommunikation zwischen Server und Client}
+\subsection{Der Weg eines Datenpakets von Client zu Server}
+Möchte eine Anwendung etwas aus dem Internet abrufen so sendet diese Datenpakete aus. Diese Datenpakete enthalten jeweils eine Absender IP-Adresse, eine Ziel IP-Adresse, Nutzdaten und weitere Metainformationen. Diese Datenpakete müssen nun ihren weg von der Anwendung bis zum Ziel Server bestreiten. 
+\\\\
+Dabei werden sie, nachdem sie von der Anwendung an der Betriebsystem übergeben wurden, geroutet. Beim Routing wird für ein Datenpaket anhand der Ziel IP-Adresse ein passender Netzwerkadapter gesucht an, den das Datenpaket übergeben wird. Gibt es keine spezielle Route für diese IP-Adresse wird die sogenante Standard-Route genommen. Die Standard-Route fürt im Normalfall zu einem Router dieser Router betreibt Heutzutage erheblich mehr als nur simples Routing ins Internet. 
+\\\\
+Praktisch immer ist auf diesen Haushalts-Routern eine NAT Funktion aktiviert. Sollte unser Datenpaket nicht für das lokale Netzwerk bestimmt und damit wieder die Standard-Route angewandt werden muss es hier nun eine NAT Wall durchqueren. Dabei ändert sich die Absender IP-Adresse zur öffentlichen IP-Adresse des Routers bevor das Datenpaket ins Internet weitergeleitet wird. Die Ziel IP-Adresse wird später auf die öffentliche IP-Adresse des Routers Antworten.
+\\\\
+Um nun mehrere verschiedene Internetverbindungen zu bündeln müssen wir Datenpakete für das selbe Ziel über verschiedene Netzwerkadapter hinaussenden. Dies wird in unserem Fall von unserem Windows Treiber erledigt. Dieser leitet Datenpakete für die Standard-Route zu sich und teilt diese dann auf die physische Netzwerkadapter auf. Aufteilen alleine ist hier aber nicht genug da dann beim Zielrechner zusammengehörende Datenpakete von verschiedenen IP-Adressen ankommen würden. 
+\\\\
+Normale Server sind für diese Art der Kommunikation nicht ausgelegt. Besonders sehr Session behaftete Dienste sollten hier größe Probleme haben wie FTP. FTP schickt nicht mit jedem Datenpaket mit zu welchem aktuell Verbundenem FTP-Nutzer dieses Datenpaket gehört. Kommt nun ein Datenpaket von einer anderen IP-Adresse und sogar von einem anderen Port hat ein FTP-Server keine möglichkeit festzustellen zu welchem Nutzer diese Daten gehört haben. 
+\\\\
+Um dieses Problem zu behandeln haben wir einen Multi-Wan Bonding Proxy Server entwickeln müssen. Anstelle die Datenpakete einfach nur auf die Netzwerkadapter aufzuteilen verpackt unser Windows Treiber sie zuvor in eigenen Datenpaketen welche an unseren Proxy Server adressiert sind. Unser Server ist darauf ausgelegt von mehreren verschiedenen IP-Adressen und Ports Datenpakete zu empfanden. 
+\\\\
+Woher weiß unser Server welches Datenpaket zu welchem Nutzer gehört? Der Windows Treiber hat einen virtuellen Netzwerkadapter dieser virtuelle Netzwerkadapter hat eine IP-Adresse. Diese IP-Adresse können wir verwenden um verschiedene Nutzer zu unterscheiden. Aktuell haben wir aber noch keine explizite Mehrbenutzerfähigkeit eingebaut. Trotzdem ist es zumindest erforderlich das sich die IP-Adresse des virtuellen Netzwerkadapters des Nutzers im selben Subnetz befindet wir die IP-Adresse des virtuellen Netzwerkadapters des Servers. Da sonst die entpackten Datenpakete des Nutzers nicht vom virtuellen Netzwerkadapter des Servers akzeptiert werden.
+\\\\
+Der Server nimmt die verpackten Datenpakte, entpackt diese, wendet auf sie NAT an um sie  dann mit seiner eigenen IP-Adresse als Absender an die Ziel-Adresse zu versenden.
+
+\subsection{Der Weg eines Datenpakets von Server zu Client}
+Sendet ein Zielrechner aus dem Internet eine Antwort auf eine Anfrage unseres Proxy Servers so wird auf diese bei der Ankunft NAT angewendet. Nachdem durchschreiten der NAT Wall erhält das Datenpaket eine neue Ziel-Adresse nämlich jene die beim senden der Anfrage vom Nutzer noch unsere Absederadresse war.
+\\\\
+Die Absenderadresse war ursprünglich die IP-Adresse des virtuellen Netzwerkadapters unseres Windows Treibers. Anhand dieser Ziel IP-Adresse könnte der Server nun feststellen an welchen Nutzer er das Paket zurück senden muss bzw. dadurch weiters an welche der verschiedenen Eingehenden verbindungen und an welche nicht. Da Multiusersupport aber in dem Prototypen noch nicht enthalten ist wird eine Antwort aktuell einfach auf alle vorhandenen Verbindungen aufgeteilt. Die Empfänger IP-Adresse muss aber trotzdem wieder korrekt gesetzt werden da sonst der virtuelle Netzwerkadapter des Clients das Datenpaket nicht akzeptieren würde.
+\\\\
+Nach dem durchqueren der NAT Wall werden die Datenpakete nun einfach wieder verpackt und an die Internetadressen und Ports zurück gesendet von denen ursprünglich die Anfrage stammt.
+\\\\
+Nun landen die Datenpakete wieder beim Router des Nutzers bei diesem wird beim durchqueren der NAT Wall die öffentliche IP-Adresse des Nutzers wieder gegen die lokale IP-Adresse ersetzt und an das Datenpaket an den Rechner des Nutzers gerouted.
+\\\\ 
+Beim Rechner des Nutzers werden diese Datenpakete nun wieder vom Windows Treiber entpackt und an den virtuellen Netzwerkadapter übergeben, welcher die Datenpakte wiederum an die ursprüngliche Applikation übergibt.
+
+
+\section{Architektur des Multi-Wan Bonding fähigen Proxy Servers}
+\subsection{Sammeln von IP Paketen von verschiedenen Absendern}
+Um IP Pakete die von unserem Windows Treiber kommen entgegennehmen zu können lauscht der Proxy Server Standardmäßig auf Port 5555 nach UDP Datagrams. 
+\\\\
+Jedes dieser Datagrams enthält wiederum ein IP Paket des Windows Treibers als Nutzdaten. Das IP Paket im inneren des Datagrams wird nun genommen und weiter durch den Server verarbeitet.
+\\\\
+Die Nutzdaten sind aber nicht die einzig Wichtigen Informationen in dem Datagram. Der Server speichert sich auch den Endpunkt von dem das Datagram gekommen ist. Dies ist Notwendig da wir davon ausgehen müssen das eine NAT Wall zwischen dem Windows Treiber und Server ist. Durch eine NAT Wall ändert sich jedoch der Absende Port und die IP Adresse. Um später also Daten auch zurück schicken zu können ist es Notwendig sich Port und IP-Adresse zu merken. Einen fixen Port können wir beim zurückschicken deswegen auch nicht nehmen.
+\\\\ 
+Rücksicht auf einen eventuell beschädigten Inhalt des Datagrams müssen wir auch nicht nehmen. Um die Fehlerbehandlung kümmert sich das TCP im inneren der Nutzdaten des Datagrams. Tatsächlich wäre es ein Problem TCP und nicht UDP zur übertragung zu verwenden da wir dann meistens TCP Pakete über eine TCP Verbindung senden würden. Dies würde zu einem sogenannten TCP Meltdown führen.
+
+\subsection{Senden der gesammelten IP Pakete des Windows Treibers}
+Die Nutzdaten der gesammelten Datagrams sind selbst wieder IP Pakete. Diese nehmen wir nun und übergeben als byte Arrays an den virtuellen Netzwerkadapter. Da Datenpakete betreten den virtuellen Netzwerkadapter hierbei von der selben Seite wie es bei einem physischen Netzwerkadapter die Bits und Bytes über das Patch Kabel würden.
+\\\\  
+Danach wird das Datenpaket gerouted. In den meisten Fällen wird es wohl ein Paket für das Internet sein es kann aber auch ein Paket für die IP-Adresse den virtuellen Netzwerkadapters des Servers sein oder für die öffentliche IP-Adresse des Servers. Sollte an dem Server noch ein weiteres Netzwerk hängen so kann das Paket auch für dieses sein. Ist es jedoch für das Internet bestimmt wird die Standard Route gewählt welche zu dem Netzwerkadapter ins Internet führt. 
+\\\\
+Nachdem das Paket nun gerouted wurde kommt es hier vor dem versenden ins Internet noch zur Anwendung von NAT. Der Grund dafür ist das die IP-Adresse des Servers nun vom Server selbst als auch von den Nutzern des Proxy Servers verwendet wird. Wärend diesem NAT Prozess wird die Absender IP-Adresse gegen die öffentliche IP-Adresse des Servers getauscht. Danach verlässt das Datenpaket unseren Server ins Internet.
+
+\subsection{Entgegennehmen von Antwort Paketen aus dem Internet}
+Antworten aus dem Internet werden direkt nach dem eintreffen beim Server wieder durch die NAT Wall gezogen. Dabei wird die Ziel IP-Adresse, welche bis zu diesem Punkt die öffentliche IP-Adresse des Servers war, gegen die lokale IP-Adresse des virtuellen Netzwerkadapters des Windows Treibers eingetauscht.
+\\\\ 
+Nun wird das Datenpaket gerouted. Da das routing Ziel die IP-Adresse des Windows Treiber seinen virtuellen Netzwerkadapter ist wird das Datenpaket an den virtuellen Netzwerkadapter des Servers übergeben. Dies geschied da sich der virtuelle Netzwerkadapter des Servers und des Windows Treibers im selben subnetz befinden müssen.  
+\\\\
+Nach der entgegenname durch den virtuellen Netzwerkadapter erhalten wir das IP Paket als byte array welches wir nun wieder an den Windows Treiber senden müssen.
+
+\subsection{Senden von Antwort Paketen an den Windows Treiber}
+Jene Datenpakete welche wir als Byte Arrays aus dem virtuellen Netzwerkadapter gezogen haben senden wir über die ganz normale UDP Socket API unter Linux an den Windows Treiber. 
+\\\\
+Dabei erstellen wird wieder ein Datagram und verwenden als Nutzdaten das IP Paket welches wir als byte array vorliegen haben. Als Zieladresse und Ziel Port verwenden wir einen der Endpunkte welche wir beim Empfangen der Anfragen erhalten haben.
+\\\\
+Nun durchqueren das Datagram vermutlich noch die NAT Wall des Nutzers bevor es vom Windows Treiber weiter verarbeitet wird. 
+
+
+\section{Implementierung des Multi-Wan Bonding Proxy Servers}
+\subsection{Erstellen und verwalten eines virtuellen Netzwerkadapters unter Linux}
