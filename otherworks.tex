@@ -1,41 +1,44 @@
 \chapter{Verwandte Arbeiten}
 \label{chap:VerwandteArbeiten}
-In diesem Kapitel werden bereits bestehende Multi-Wan Bonding Lösungen miteinander und mit unserem Prototyp verglichen.
+In diesem Kapitel werden bereits bestehende Multi-Wan Bonding Lösungen miteinander und mit unserem Prototyp verglichen.  
 
 
-\section{Hardware-Lösungen}
-Bei den Multi-Wan Bonding Hardwarelösungen gibt es von den verschiedensten Anbietern, z.B. Cisco, Peplink, Dual-Wan Bonding Router mit denen man 2 verschiedene Internetanbindungen kombinieren kann. Nur sehr wenige Anbieter wie z.B. TP-Link besitzen Multi-Wan Lösungen also Router, bei denen es auch möglich ist mehr als zwei verschiedene Internetanbindungen zu kombinieren. Jedoch ist es technisch nicht realisierbar unendlich viele verschiedene Internetanbindungen zu kombinieren, da man die Internetanbindungen mittels Patchkabel in den Wan-Port stecken muss und ein Multi-Wan Bonding Router nur eine bestimmte Anzahl dieser Ports besitzt. Aus dem Grund das man den Multi-Wan Bonding Router mittels Patchkabel an andere Router oder auch Switches stecken muss ist man sehr unflexibel. Multi-Wan Bonding Router haben wie auch ganz normale Router einmalige Anschaffungskosten.
-\newline
-\newline
-Multi-Wan Bonding Router besitzen zwei verschiedene Modi, zum einen Loadbalancing welches alle Anbindungen maximal auslastet und Fallback, welches eine Internetanbindung voll ausnutzt, die anderen werden nur benutzt, falls die erste ausfällt.
+\section{Multi-Wan Bonding Hardwarelösungen}
+Bei den Multi-Wan Bonding Hardwarelösungen gibt es von den verschiedensten Anbietern, z.B. Cisco, Peplink, Dual-Wan Bonding Router mit denen man 2 verschiedene Internetanbindungen kombinieren kann. Nur sehr wenige Anbieter wie z.B. TP-Link besitzen Multi-Wan Bonding Lösungen also Router, bei denen es auch möglich ist mehr als zwei verschiedene Internetanbindungen zu kombinieren. Jedoch ist es technisch nicht realisierbar unendlich viele verschiedene Internetanbindungen zu kombinieren, da man die Internetanbindungen mittels Patchkabel in den Wan-Port stecken muss und ein Multi-Wan Bonding Router nur eine bestimmte Anzahl dieser Ports besitzt. Aus dem Grund das man den Multi-Wan Bonding Router mittels Patchkabel an andere Router oder auch Switches stecken muss ist man sehr unflexibel. Multi-Wan Bonding Router haben wie auch ganz normale Router einmalige Anschaffungskosten.\footnote[1]{\cite[Vgl.][]{5}}
+\\\\
+Multi-Wan Bonding Router besitzen zwei verschiedene Modi, zum einen Loadbalancing welches alle Anbindungen maximal auslastet und Fallback, welches eine Internetanbindung voll ausnutzt, die anderen werden nur benutzt, falls die erste ausfällt.$^{1}$ 
 
 
 \subsection{Cisco Systems Gigabit dual VPN 14 port router}
-Mit diesem Dual-Wan Bonding Router kann man zwei verschiedene Internetanbindungen miteinander kombinieren und mithilfe des eingebauten Switches auf 14 Ports aufteilen. 
-\newline
-\newline
-Im Gegensatz zu unserer Lösung können mit diesem Multi-Wan Bonding Router nur zwei verschiedene Internetanbindungen miteinander kombiniert werden und man muss Anschaffungskosten bezahlen. 
+Der Dual-Wan Bonding Router vom Hersteller Cisco ermöglicht es einem bis zu zwei verschiedene Internetanbindungen gleichzeitig zu nutzen und diese auf 14 verschiedenen Ports auszugeben. Dieser Router besitzt beide Modi.$^{1}$
+\\\\
+Im Gegensatz zu unserer Lösung können mit diesem Multi-Wan Bonding Router nur zwei verschiedene Internetanbindungen miteinander kombiniert werden und man muss Anschaffungskosten bezahlen.$^{1}$ 
 
-
-\subsection{TP-Link Gigabit Ethernet Safestream VPN Router}
-Mit diesem Router ist es möglich bis zu vier verschiedene Gigabit Internetanbindungen gleichzeitig zu nutzen.
 \newpage
-\noindent
-Im Gegensatz zu unserer Lösung können mit diesem Multi-Wan Bonding Router nur bis zu vier verschiedene Internetanbindungen miteinander kombiniert werden und man muss Anschaffungskosten bezahlen.
+\subsection{TP-Link Gigabit Ethernet Safestream VPN Router}
+Der Dual-Wan Bonding Router vom Hersteller TP-Link ermöglicht es einem bis zu vier verschiedene Internetanbindungen gleichzeitig zu nutzen. Dieser Router hat insgesammt 5 Ports, davon ist einer ein WAN Port, einer ein LAN Port und drei WAN/LAN Ports. Dieser Router besitzt beide Modi.\footnote[1]{\cite[Vgl.][]{5}}
+\\\\
+Im Gegensatz zu unserer Lösung können mit diesem Multi-Wan Bonding Router bis zu vier verschiedene Internetanbindungen miteinander kombiniert werden und man muss Anschaffungskosten bezahlen.$^{1}$
 
 
-\section{Software-Lösungen}
-Bei den Softwarelösungen betrachten wir genauer die Multi-Wan Bonding Lösung Speedify und vergleichen unsere Lösung auch zu OpenVPN einer führenden VPN-Software da wir einige Ähnlichkeiten mit VPNs haben. Bei Softwarelösungen ist es üblich nicht wie bei Hardwarelösungen einmalig, sondern monatliche oder jährliche Lizenzkosten zu bezahlen, so ist das auch bei Speedify. Menschen, die unterwegs arbeiten brauchen, auch oft eine unterbrechungsfreie Internetanbindung um z.B. auf den Firmenserver mittels VPN zugreifen zu können dies ist mittels Muli-Wan Bonding Softwarelösungen zu erreichen. Multi-Wan Bonding Softwarelösungen haben auch noch einen anderen großen Vorteil, da man quasi unendlich viele verschiedene Internetanbindungen kombinieren kann, es hängt nur davon ab wie viele Netzwerkadapter das Gerät auf dem die Multi-Wan Bonding Lösung betrieben wird hat.
+\section{Multi-Wan Bonding Softwarelösungen}
+Bei den Softwarelösungen betrachten wir genauer die Multi-Wan Bonding Lösung Speedify und vergleichen unsere Lösung auch zu OpenVPN einer führenden VPN-Software, da wir einige Ähnlichkeiten mit VPNs haben. Bei Softwarelösungen ist es üblich nicht wie bei Hardwarelösungen einmalig, sondern monatliche oder jährliche Lizenzkosten zu bezahlen, so ist das auch bei Speedify. Menschen, die unterwegs arbeiten brauchen, auch oft eine unterbrechungsfreie Internetanbindung um z.B. auf den Firmenserver mittels VPN zugreifen zu können, dies ist mittels Multi-Wan Bonding Softwarelösungen zu erreichen. Multi-Wan Bonding Softwarelösungen haben auch noch einen anderen großen Vorteil, da man quasi unendlich viele verschiedene Internetanbindungen kombinieren kann, es hängt nur davon ab wie viele Netzwerkadapter das Gerät, auf dem die Multi-Wan Bonding Lösung betrieben wird, hat.\footnote[2]{\cite[Vgl.][]{3}}\footnote[3]{\cite[Vgl.][]{4}}
 
 
 \subsection{Speedify}
-Speedify ist eine bereits existierende Multi-Wan Bonding Software-Lösung von Connectify Incorporated, die das Benützen von mehreren Internetverbindungen gleichzeitig möglich macht. Es ist auch ein VPN. Bei Speedify sind nur 2 GB an Datenübertragung pro Monat kostenlos, wenn man mehr Datenvolumen benötigt muss man sich für ein kostenpflichtiges Abonnement entscheiden. Es gibt 3 verschiedene Abonnements bei denen sich die Anzahl an Nutzern verändert, je Nutzer kann man Speedify auf bis zu 5 Geräten gleichzeitig nutzen. Speedify hat 3 verschiedene Modi Streaming, Geschwindigkeit und Redundant. Im Modus Streaming wird Streaming Traffic eine höhere Priorität zugeordnet als normalen, sodass man jegliche Art von Streams ohne Verbindungsprobleme ansehen oder anhören kann. Beim Geschwindigkeitsmodus wird die maximale Geschwindigkeit alles Internetanbindungen für jeglichen Datenverkehr benützt. Im Redundanten Modus werden die Daten auf jeder Verbindung gleichzeitig übertragen und die Daten die als erstes Ankommen werden verwendet alle anderen werden verworfen, damit hat man eine ausfallsichere Verbindung. Speedify ist auf den Plattformen IOS, Android, Windows, Linux und MacOS verfügbar.
-\newline
-\newline
-Unsere Lösung ist im Gegensatz zu Speedify Open-Source und komplett kostenlos. Unsere Lösung ist nur auf Windows verfügbar und wir haben auch nur den Geschwindigkeitsmodus wie bei Speedify.
+Speedify ist eine bereits existierende Multi-Wan Bonding Software-Lösung von Connectify Incorporated, die das Benützen von mehreren Internetverbindungen gleichzeitig möglich macht.$^{2}$
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{Speedify.png}
+    \caption[Speedify]{Speedify Icon}[\cite{3}] 
+\end{figure}
+\newpage
+\ \\
+Es ist auch ein VPN. Bei Speedify sind nur 2 GB an Datenübertragung pro Monat kostenlos, wenn man mehr Datenvolumen benötigt, muss man sich für ein kostenpflichtiges Abonnement entscheiden. Es gibt 3 verschiedene Abonnements bei denen sich die Anzahl an Nutzern verändert, je Nutzer kann man Speedify auf bis zu 5 Geräten gleichzeitig nutzen. Speedify hat 3 verschiedene Modi Streaming, Geschwindigkeit und Redundant. Im Modus Streaming wird Streaming Traffic eine höhere Priorität zugeordnet als normalen, sodass man jegliche Art von Streams ohne Verbindungsprobleme ansehen oder anhören kann. Beim Geschwindigkeitsmodus wird die maximale Geschwindigkeit aller Internetanbindungen für jeglichen Datenverkehr benützt. Im Redundanten Modus werden die Daten auf jeder Verbindung gleichzeitig übertragen und die Daten die als erstes Ankommen werden verwendet alle anderen werden verworfen, damit hat man eine ausfallsichere Verbindung. Speedify ist auf den Plattformen IOS, Android, Windows, Linux und MacOS verfügbar.\footnote[1]{\cite[Vgl.][]{3}}
+\\\\
+Unsere Lösung ist im Gegensatz zu Speedify Open-Source und komplett kostenlos. Jedoch ist unsere Lösung nur auf Windows verfügbar und unser Fokus liegt auf einer stabilen Internetverbindung.$^{1}$
 
 \subsection{OpenVPN}
-OpenVPN ist eine Open-Source VPN-Lösung, die es einem möglich macht seine Verbindung zu verschlüsseln, dazu wird OpenSSL oder mbed TLS verwendet. Viele kommerzielle VPNs zum Beispiel NordVPN und Surfshark basieren auf OpenVPN.
-\newline
-\newline
-OpenVPN unterstützt kein Multi-Wan Bonding deshalb kann es nicht als Alternative oder Konkurrenz zu unserer Lösung angesehen werden.
+OpenVPN ist eine Open-Source VPN-Lösung, die es einem möglich macht seine Verbindung zu verschlüsseln, dazu wird OpenSSL oder mbed TLS verwendet. Viele kommerzielle VPNs zum Beispiel NordVPN und Surfshark basieren auf OpenVPN.\footnote[2]{\cite[Vgl.][]{4}}
+\\\\
+OpenVPN unterstützt kein Multi-Wan Bonding deshalb kann es nicht als Alternative oder Konkurrenz zu unserer Lösung angesehen werden.$^{2}$

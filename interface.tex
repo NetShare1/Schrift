@@ -1,43 +1,284 @@
-\chapter{Desktop-Anwendung}
-\label{chap:DesktopAnwendung}
+\chapter{Windows Desktop-Anwendung zur Steuerung des Treibers}
+\label{chap:WindowsDesktop-AnwendungzurSteuerungdesTreibers}
 
-\section{Notification Area}
-Als Notification Area werden alle rechtsbündigen Symbole bis zu dem Pfeil, der nach oben zeigt bezeichnet, wenn man auf den Pfeil klickt wird die Overflow Area geöffnet. In diesen Bereich werden standardmäßig einige Symbole verschoben. Jedes Symbol kann von der Notification Area in die Overflow Area verschoben werden dasselbe gilt auch für die andere Richtung. 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{NotificationArea.png}
-    \caption[NotificationArea]{Notification Area} 
-\end{figure}
-\  \\
-Die Notification Area ist besser bekannt unter dem Namen Systemtray, wird aber offiziell von Windows als Notification Area bezeichnet. Der Begriff Systemtray kommt von Windows 95, weil es da eine Anwendung gibt die systray.exe heißt, nachdem dieses Programm geschlossen wurde sind die Symbole die in der Notification Area angezeigt wurden verschwunden. Deshalb hat man angenommen, da die Anwendung die dafür zuständig ist systray.exe heißt, dann ist der Name des Bereichs wo die Symbole angezeigt werden sicher Systemtray. Das ist aber nicht der einzige Grund der Verwirrung gewesen Microsoft Mitarbeiter haben den Bereich als Systemtray bezeichnet und bis 2003 war auch in der Windows Dokumentation der Begriff Systemtray enthalten. Nicht nur in der Dokumentation ist Windows so ungenau auch in den Windows 10 Einstellungen, wenn man sein System auf Englisch hat findet man noch den Begriff Systemtray unter Settings → Ease of Access → Narrator.
-
-\subsection{Windows Guidelines}
-Dieser Bereich wurde Notification Area genannt, da der Plan war das nur Symbole gezeigt werden, die dem Benutzer hilfreiche Informationen geben entweder anhand von Benachrichtigungen oder das sich das Symbol ändert wie zum Beispiel bei der Akkustandanzeige. Ein anderer wichtiger Aspekt eines Symbols in der Notification Area ist, das die Information wichtig genug ist den Benutzer zu stören, trotzdem aber keine sofortige  Benutzeraktion erfordert. Die Benachrichtigungen sollen ohne weiteres einfach ignoriert werden können, falls diese Benachrichtigung sofortige Benutzeraktion benötigt, wird einem vorgeschlagen, statt dieser eine Dialog Box zu benutzen. Damit wird der Benutzer dazu gezwungen etwas zu machen, wenn er seinen Computer weiter verwenden will. Es soll möglich sein die Benachrichtigungen auszuschalten. Am besten werden Benutzer nicht von ihrer Arbeit durch die Benachrichtigungen abgelenkt, sondern sehen diese erst, wenn sie schon aus einem anderen Grund den Fokus verloren haben. 
-
-\subsection{Anwendung}
-Viele Entwickler nutzen die Notification Area aber nicht so wie es von Windows selbst vorgeschlagen wird, sondern einfach um ihre Anwendung offenzuhalten ohne das der normale Benutzer etwas davon weiß
-\newline
-\newline
-Um eine Notification Area Anwendung zu implementieren wird ein Symbol benötigt, welches die Anwendung dann in dem Bereich ablegt. 
+\section{Desktop-Anwendung in der Notification Area}
+Wir haben unsere Windows Desktop-Anwendung zum Steuern des Multi-Wan Bonding fähigen Treibers als Notification Area Programm entwickelt. Dabei war es uns sehr wichtig, dass der Benutzer einmal auf das Symbol klicken kann, damit wird ihm die wie im Kapitel XXXXXX beschriebene Benutzeroberfläche angezeigt. Wenn er jetzt nochmals darauf oder woanders hin drückt, soll die Benutzeroberfläche verborgen werden
+\\\\
+Um eine Notification Area Anwendung zu implementieren, haben wir eine C\# Klasse entwickelt, diese Klasse ist von \textbf{ApplicationContext} abgeleitet. In dieser Klasse wird ein \textbf{NotifyIcon} angelegt. Dieses \textbf{NotifyIcon} benötigt ein Symbol, mit diesem wird dann die Anwendung in der Notfication Area abgelegt, einen Text der erscheint, sobald sich die Maus über dem Symbol befindet, in unserem Fall "NetShare". Weiters hat das Symbol einen Button zum Schließen der Anwendung, sobald das Symbol mit der rechten Maustaste angeklickt wurde. Wenn dieser Knopf gedrückt wird beendet sich die Windows Desktop-Anwendung und auch der Multi-Wan Bonding fähige Treiber.
 \begin{figure}[H]
     \centering
     \includegraphics[width=5cm, height=5cm, keepaspectratio]{NAIcon.png}
     \caption[NotificationArea]{Netshare Symbol in der Notification Area} 
 \end{figure}
-\  \\
+\noindent
 
-\subsection{Position}
+\newpage
+\subsection{Relative Positionierung der grafischen Oberfläche}
+Die Grafische Oberfläche der Windows Desktop-Anwendung soll sich immer an der richtigen Stelle relativ zur Taskleiste positionieren. Mithilfe von \textbf{Screen.PrimaryScreen.Bounds} und \textbf{Screen.PrimaryScreen.WorkingArea} finden wir heraus wo sich die Taskleiste befindet. Mit diesem Wissen setzen wir dann die relative Positionierung der grafischen Oberfläche. \textbf{Screen.PrimaryScreen.Bounds} gibt einem die gesamte Größe des Bildschirms an, \textbf{Screen.PrimaryScreen.WorkingArea} gibt einem die Größe an in der z.B. auch Webbrowser geöffnet sind, also ohne der  Taskleiste. Im Codebeispiel sieht man wie dies funktioniert, wenn sich die Taskleiste am unteren Rand befindet.
+\begin{program}[H]
+\caption{Taskleiste unten}
+\begin{CSharpCode}
+if((Screen.PrimaryScreen.Bounds.Height - Screen.PrimaryScreen.WorkingArea.Height)>0)
+{
+    this.Location = new Point(Screen.PrimaryScreen.WorkingArea.X + 
+      Screen.PrimaryScreen.WorkingArea.Width - Width - 10, 
+      Screen.PrimaryScreen.WorkingArea.Y + Screen.PrimaryScreen.WorkingArea.Height 
+      - Height);
+}
+\end{CSharpCode}
+\end{program}
+\noindent
+
+\section{Kommunikation zwischen dem Multi-Wan Bonding fähigen Treiber und der Windows Desktop-Anwendung}
+Die Windows-Desktop Anwendung muss für das Steuern des Multi-Wan Bonding fähigen Treibers mit diesem Kommunizieren. Wir haben uns als Interprozesskommunikationsart für Sockets entschieden, da wir dies für am einfachsten angesehen haben, weil man sich nicht um die Synchronisation kümmern muss. Der Multi-Wan Bonding fähige Treiber erstellt einen Server der auf "localhost" \ auf dem Port 5260 lauscht und wartet bis sich ein Client mit ihm verbindet. Die Windows Desktop-Anwendung erstellt für jeden Steuerungsbefehl an den Multi-Wan Bonding fähigen Treiber einen Client, der sich zum Server verbindet und dann ein JSON Objekt mit dem jeweiligen Befehl zum Server sendet. Sobald die Windows Desktop-Anwendung die erwartete Antwort bekommen hat, wird die Verbindung zum Multi-Wan Bonding fähigen Treiber geschlossen.
+
+\newpage
+\subsection{JSON Object}
+\subsubsection{Anfrage (Request)}
+Wenn die Windows Desktop-Anwendung eine Anfrage an den Multi-Wan Bonding fähigen Treiber sendet, hat das JSON Objekt folgende Struktur.
+\begin{program}[H]
+\caption{JSON Anfrage}
+\begin{GenericCode}
+    {
+        "type" :  "",
+        "on" :  "",
+        "data" : {} 
+    }
+\end{GenericCode}
+\end{program}
+\noindent
+Bei dem Schlüssel \textbf{type} wird vom Multi-Wan Bonding fähigen Treiber \textbf{Get} oder \textbf{Put} erwartet. Mit \textbf{Get} kann die Windows-Desktop Anwendung die derzeitige Konfiguration oder die Download und Upload Geschwindigkeiten des Multi-Wan Bonding fähigen Treibers anfordern. Mithilfe von \textbf{Put} werden Einstellungen hinzugefügt oder geändert. 
+\\\\
+Bei dem Schlüssel \textbf{on} gibt es die Werte \textbf{driver.state}, \textbf{deamon.state}, \textbf{connection.state}, \textbf{config} und \textbf{statistics}. Mit \textbf{driver.state} verbindet sich der Multi-Wan Bonding fähige Treiber mit dem Multi-Wan Bonding fähigen Server oder bricht die Verbindung ab. Mithilfe von \textbf{deamon.state} kann man den Multi-Wan Bonding fähigen Treiber beenden. Mit \textbf{connection.state} kann man die Verbindung zwischen dem Server und dem Client von der Server Seite aus beenden und mit \textbf{config} kann man die derzeitigen Konfigurationen anpassen oder anfordern. Mit dem Wert \textbf{statistics} erhält man die Download und Upload Geschwindingkeiten.
+\\\\
+Bei dem Schlüssel \textbf{data} wird der Wert \textbf{state} erwartet, falls bei dem Schlüssel on der Wert \textbf{driver.state}, \textbf{deamon.state} oder \textbf{connection.state} ist. Wenn der vorherige Schlüssel \textbf{config} ist, wird bei \textbf{data} entweder \textbf{logLevel}, \textbf{serverIp}, \textbf{adapterIp}, \textbf{adapterSubnetBits}, \textbf{names} oder nichts, falls man die gesamte Konfiguration erhalten will, dies ist aber nur möglich, wenn bei dem Schlüssel \textbf{type} der Wert \textbf{Get} ist. Wenn beim Schlüssel \textbf{on} \textbf{statistics} steht, ist wird in \textbf{data} ebenfalls nichts erwartet. 
 
 
-\section{Kommunikation zwischen dem Multi-Wan Bonding Treiber und der Windows Desktop Anwendung}
-\subsection{Arten der Kommunikation}
-\subsubsection{Shared Memory}
-\subsubsection{Dateien}
-\subsubsection{Message Queue}
-\subsubsection{Pipes}
-\subsubsection{Sockets}
+\subsubsection{Antwort (Response)}
+Wenn der Multi-Wan Bonding Server eine Antwort an die Windows-Desktop Anwendung sendet, ist das JSON Objekt folgendermaßen aufgebaut.
+\begin{program}[H]
+\caption{JSON Antwort}
+\begin{GenericCode}
+    {
+        "type" :  "",
+        "data" : {}
+    }
+\end{GenericCode}
+\end{program}
+\newpage
+\noindent
+Bei dem Schlüssel \textbf{type} gibt es zwei mögliche Werte entweder \textbf{Response} oder \textbf{Update}. Mit \textbf{Response} wird mitgeteilt das eine Anfrage fertig abgearbeitet ist. Mithilfe von \textbf{Update} wird ausgedrückt, dass der Multi-Wan Bonding fähige Treiber etwas geändert hat.
+\\\\
+Beim Schlüssel \textbf{data} steht, falls ein Fehler aufgetreten ist \textbf{error}, ansonsten \textbf{state}, der angeforderte Konfigurationswert, alle konfigurierten Werte mit dem jeweiligen Werten drinnen oder \textbf{down} mit einem Wert und \textbf{up} mit einem Wert.  
 
-\subsection{Start}
-\subsection{Stop}
-\subsection{Kill}
-\subsection{Konfiguration}
+
+\subsection{Verbinden des Multi-Wan Bonding fähigen Treibers mit einem Multi-Wan Bonding fähigen Server}
+Um mithilfe des Multi-Wan Bonding fähigen Treibers die Verbindung zum Multi-Wan Bonding fähigen Server herzustellen, wird eine Anfrage von der Windows-Desktop Anwendung gesendet. Diese Anfrage ist folgendermaßen aufgebaut:
+\begin{program}[H]
+\caption{JSON Anfrage verbinden}
+\begin{GenericCode}
+    {
+        "type" :  "Put",
+        "on" :  "driver.state",
+        "data" : {"state" : "running"} 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+Daraufhin checkt der Multi-Wan Bonding fähige Treiber ob dieser schon mit dem Multi-Wan Bonding fähigen Server verbunden ist, falls dies der Fall ist, wird diese Antwort gesendet:
+\begin{program}[H]
+\caption{JSON Antwort verbinden running}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {"state" : "running"} 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+Falls der Multi-Wan Bonding fähige Treiber sich gerade mit dem Multi-Wan Bonding fähigen Server verbindet oder noch keine Verbindung aufgebaut ist, wird beim Schlüssel \textbf{state} der Wert \textbf{startup} eingetragen und als Antwort gesendet. Nachdem die Verbindung erfolgreich aufgebaut wurde, wird das JSON Objekt von vorher gesendet. Wenn die Verbindung nicht aufgebaut werden kann, bekommt man folgende Antwort:
+\begin{program}[H]
+\caption{JSON Antwort verbinden crashed}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {"state" : "crashed"} 
+    }    
+\end{GenericCode}
+\end{program}
+\newpage
+\noindent
+Nachdem man diese Antwort bekommen hat, versucht die Windows Desktop-Anwendung es noch zweimal, indem sie wieder die Anfrage an den Multi-Wan Bonding fähigen Treiber sendet. Falls bei den zwei weiteren Anfragen auch nur der Wert \textbf{crashed} bei dem Schlüssel \textbf{state} zurückkommt, wird dem Benutzer eine Fehlermeldung angezeigt, die Ihn dazu auffordert den Multi-Wan Bonding fähigen Treiber neu zu starten.
+
+
+\subsection{Verbindung zu einem Multi-Wan Server trennen}
+Um die Verbindung zwischen dem Multi-Wan Bonding fähigen Treiber und dem Multi-Wan Bonding fähigen Server zu trennen, wird eine Anfrage von der Windows Desktop-Anwendung gesendet. Diese Anfrage ist folgendermaßen aufgebaut:
+\begin{program}[H]
+\caption{JSON Anfrage Verbindung trennen}
+\begin{GenericCode}
+    {
+        "type" :  "Put",
+        "on" :  "driver.state",
+        "data" : {"state" : "stopped"} 
+    }     
+\end{GenericCode}
+\end{program}
+\noindent
+Der Multi-Wan Bonding fähige Treiber sendet als Antwort seinen derzeitigen Status, diese Antwort wird so gesendet:
+\begin{program}[H]
+\caption{JSON Antwort Verbindung trennen}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {"state" : ""} 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+Wobei bei dem Schlüssel \textbf{state} entweder der Wert \textbf{startup}, \textbf{running} oder \textbf{stopped} steht. Falls der Multi-Wan Bonding fähige Treiber als Status nicht \textbf{stopped} hat, bricht der Multi-Wan Bonding fähige Treiber die Verbindung zum Multi-Wan Bonding fähigen Server ab und sendet die Antwort an die Windows Desktop-Anwendung die als \textbf{state} \textbf{stopped} hat.
+
+
+\subsection{Multi-Wan Bonding fähigen Treiber beenden}
+Um den Multi-Wan Bonding fähigen Treiber zu beenden, wird eine Anfrage von der Windows Desktop-Anwendung gesendet. Diese Anfrage ist folgendermaßen aufgebaut:
+\begin{program}[H]
+\caption{JSON Anfrage Treiber beenden}
+\begin{GenericCode}
+    {
+        "type" :  "Put",
+        "on" :  "deamon.state",
+        "data" : {"state" : "stopped"} 
+    }     
+\end{GenericCode}
+\end{program}
+\newpage
+\noindent
+Der Multi-Wan Bonding fähige Treiber sendet im Sekundentakt eine Antwort in dieser steht, was der Multi-Wan Bonding fähige Treiber gerade macht. Die Antwort wird mit diesem Aufbau gesendet:
+\begin{program}[H]
+\caption{JSON Antwort Treiber beenden}
+\begin{GenericCode}
+    {
+        "type" :  "Update",
+        "data" : {"state" : ""} 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+Bei dem Schlüssel \textbf{state} steht als Wert entweder \textbf{worker.startup}, \textbf{worker.running} oder \textbf{worker.stopped}. Solange sich der Multi-Wan Bonding fähige Treiber im Status \textbf{startup} befindet, passiert nichts außer, dass die Antwort mit \textbf{worker.startup} sekündlich gesendet wird. Sobald der Status \textbf{running} ist, wird die Antwort mit \textbf{worker.running} gesendet und die Anwendung bekommt den Befehl sich zu schließen. Wenn dies geschehen ist, wird die Antwort mit \textbf{worker.stopped} gesendet. Zusätzlich dazu wird noch eine Antwort gesendet die als \textbf{type} \textbf{Response} hat und bei \textbf{state} den Wert \textbf{stopped} hat.
+
+
+\subsection{Konfiguration des Multi-Wan Bonding fähigen Treibers ändern}
+Um die Einstellungen von dem Multi-Wan Bonding fähigen Treiber zu ändern, wird von der Windows Desktop-Anwendung eine Anfrage gesendet, die folgendermaßen aufgebaut ist:
+\begin{program}[H]
+\caption{JSON Anfrage Konfiguration ändern}
+\begin{GenericCode}
+    {
+        "type" :  "Put",
+        "on" :  "config",
+        "data" : {} 
+    }     
+\end{GenericCode}
+\end{program}
+\noindent
+Bei dem Schlüssel \textbf{data} wird das zu konfigurierende Schlüssel Wert Paar eingetragen. Der Multi-Wan Bonding fähige Treiber sendet als Antwort folgendes JSON-Objekt:
+\begin{program}[H]
+\caption{JSON Antwort Konfiguration ändern}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {} 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+In \textbf{data} steht das geänderte Schlüssel Wert Paar. Die einzige Änderung die der Multi-Wan Bonding fähige Treiber sofort übernimmt, ist eine Änderung beim \textbf{logLevel}. Jede andere Änderung wird erst verwendet nachdem die Verbindung zum Multi-Wan Bonding fähigen Server getrennt wurde und sich neu mit diesem Verbunden wurde.
+
+
+\subsection{Konfiguration des Multi-Wan Bonding fähigen Treibers anfordern}
+\subsubsection{Gesamte Konfiguration}
+Um die gesamte Konfiguration des Multi-Wan Bonding fähigen Treibers zu bekommen, wird von der Windows Desktop-Anwendung eine Anfrage gesendet, die folgendermaßen aufgebaut ist:
+\begin{program}[H]
+\caption{JSON Anfrage Gesamte Konfiguration anfordern}
+\begin{GenericCode}
+    {
+        "type" :  "Get",
+        "on" :  "config",
+        "data" : {} 
+    }     
+\end{GenericCode}
+\end{program}
+\noindent
+Wenn diese Anfrage gesendet wird, antwortet der Multi-Wan Bonding fähige Treiber folgendermaßen:
+\begin{program}[H]
+\caption{JSON Antwort Gesamte Konfiguration anfordern}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {
+                    "logLevel" : "",
+                    "serverIp" : "",
+                    "serverPort" : "",
+                    "adapterIp" : "",
+                    "adapterSubnetBits" : "",
+                    "names" : []
+        } 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+Bei jedem Schlüssel Wert Paar in \textbf{data} wird noch der eingestellte Wert eingetragen.
+
+
+\subsubsection{Einzelne Einstellungen}
+Um nur eine einzelne Konfiguration vom Multi-Wan Bonding fähigen Treiber zu bekommen, wird eine Anfrage von der Windows Desktop-Anwendung gesendet, die folgendermaßen aufgebaut ist:
+\begin{program}[H]
+\caption{JSON Anfrage einzelne Konfiguration anfordern}
+\begin{GenericCode}
+    {
+        "type" :  "Get",
+        "on" :  "config",
+        "data" : {} 
+    }     
+\end{GenericCode}
+\end{program}
+\noindent
+In dem Feld \textbf{data} steht ein Schlüssel Wert Paar als Schlüssel steht die gewünschte Option und als Wert eine Leere Zeichenkette. Der Multi-Wan Bonding fähige Treiber sendet eine Antwort die folgendermaßen Aufgebaut ist: 
+\begin{program}[H]
+\caption{JSON Antwort einzelne Konfiguration anfordern}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {} 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+In \textbf{data} steht das angeforderte Schlüssel Wert Paar.
+
+\subsection{Upload und Download Geschwindigkeit anfordern}
+Um in der Windows Desktop-Anwendung den Upload und den Download Speed anzeigen zu können, wird eine Anfrage an den Multi-Wan Bonding fähigen Treiber gesendet, diese Anfrage ist folgendermaßen aufgebaut:
+\begin{program}[H]
+\caption{JSON Anfrage Upload Download}
+\begin{GenericCode}
+    {
+        "type" :  "Get",
+        "on" :  "statistics",
+        "data" : {} 
+    }     
+\end{GenericCode}
+\end{program}
+\noindent
+Der Multi-Wan Bonding fähige Treiber sendet daraufhin jede Sekunde eine Antwort mit der Upload und Download Geschwindigkeit, diese werden kontinuierlich berechnet. Die Antwort ist folgendermaßen aufgebaut:
+\begin{program}[H]
+\caption{JSON Antwort Upload Download}
+\begin{GenericCode}
+    {
+        "type" :  "Response",
+        "data" : {
+                    "down" : "",
+                    "up" : ""
+        } 
+    }    
+\end{GenericCode}
+\end{program}
+\noindent
+Die Anfrage an den Mult-Wan Bonding fähigen Treiber wird automatisch gesendet, sobald dieser mit einem Multi-Wan Bonding fähigen Server verbunden ist. 
