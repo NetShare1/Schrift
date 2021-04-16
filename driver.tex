@@ -76,9 +76,9 @@ Die zweite Schicht ist die Sicherungsschicht, die aus zwei Unterschichten besteh
     \item Sie verwaltet die Adresserkennung von empfangenen Frames
 \end{enumerate}
 \ \\
-Die MAC Unterschicht wird unter Windows von Miniport Treibern\footnote[3]{\cite[Vgl.][]{25}} verwaltet.$^{1}$
+Die MAC Unterschicht wird unter Windows von Miniport Treibern\footnote[2]{\cite[Vgl.][]{25}} verwaltet.$^{1}$
 \\\\
-Die zweite Unterschicht ist die LLC Schicht. Sie ist für eine fast Fehlerfreie Übertragung von Frames über die Bitübertragungsschicht verantwortlich. Die LLC Unterschicht wird in Windows von einem Protocol Treiber\footnote[5]{\cite[Vgl.][]{26}} verwaltet.$^{1}$
+Die zweite Unterschicht ist die LLC Schicht. Sie ist für eine fast Fehlerfreie Übertragung von Frames über die Bitübertragungsschicht verantwortlich. Die LLC Unterschicht wird in Windows von einem Protocol Treiber\footnote[3]{\cite[Vgl.][]{26}} verwaltet.$^{1}$
 \\\\
 Die dritte Schicht ist die Vermittlungsschicht, diese Schicht schaut welchen Physischen Weg das Paket am besten nehmen sollte um an seinem Ziel in seinem Subnetz zu kommen. Dabei werden folgende Faktoren eingerechnet:
 \\
@@ -94,7 +94,7 @@ Die Dritte Schicht ist auch die Schicht auf der Wintun arbeitet. Wintun ist unse
 
 \newpage
 \noindent
-Wintun\footnote[1]{\cite[Vgl.][]{1}} ist ein TUN Gerät, das bedeutet nur, dass es auf der OSI Schicht 3 arbeitet. Wir hätten auch die Option ein TAP Gerät\footnote[1]{\cite[Vgl.][]{28}} zu verwenden, diese Geräte agieren auf der OSI Schicht 2. Wir haben uns aber gegen ein TAP Gerät entschieden, weil wir in unseren begrenzten Zeit nicht die Ressourcen hatten, das nötige Fachwissen, dass für das Verwenden eines TAP Geräts notwendig ist, aufzubauen.
+Wintun\footnote[1]{\cite[Vgl.][]{1}} ist ein TUN Gerät, das bedeutet nur, dass es auf der OSI Schicht 3 arbeitet. Wir hätten auch die Option ein TAP Gerät\footnote[2]{\cite[Vgl.][]{28}} zu verwenden, diese Geräte agieren auf der OSI Schicht 2. Wir haben uns aber gegen ein TAP Gerät entschieden, weil wir in unseren begrenzten Zeit nicht die Ressourcen hatten, das nötige Fachwissen, dass für das Verwenden eines TAP Geräts notwendig ist, aufzubauen.
 
 \section{Anforderungen des Multi-Wan Bonding fähigen Windows Treibers}
 
