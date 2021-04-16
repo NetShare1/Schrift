@@ -1,2 +1,17 @@
-\chapter{Tests}
-\label{cha:Tests}
+\chapter{Funktionstests für Multi-Wan Bonding}
+\label{cha:Funktionstests für Multi-Wan Bonding}
+
+\section{Testaufbau}
+Beim Testen unseres Multi-Wan Bonding Prototyps haben wir die folgenden Tests durchgeführt. 
+
+\subsection{Internetverbindung}
+Um zu überprüfen, ob wir uns mithilfe unseres Prototyps eine Verbindung mit dem Internet aufbauen zu können, haben wir nur eine Internetanbindung verwendet und versucht google aufzurufen. Als dieses funktioniert hat, haben wir das selbe mit zwei Internetanbindungen versucht.
+
+\subsection{Bündelung}
+Um zu untersuchen wie gut es möglich ist Internetanbindungen zu bündeln haben wir einen Performancetest gemacht. Dabei haben wir uns die Downloadgeschwindigkeit, die Uploadgeschwindigkeit und die Latzzeit von unserem Prototyp mit zwei Internetanbindungen angesehen. Diese Werte wurden verglichen mit denen die wir bekommen haben als wir dasselbe ohne unseren Prototyp getestet haben. 
+
+\subsection{Stabilität}
+Um die Stabilität zu testen haben wir unseren Prototyp mit zwei Internetanbindung verwendet, und dann die Verbindung zu einer getrennt. Dabei haben wir untersucht ob unsere Internetverbindung abbricht und ob wir Pakete verlieren. 
+
+\section{Ergebnisse der Testdurchführung}
+Beim Testen unseres Prototyps sind wir darauf gestoßen, dass es möglich ist mit zwei Internetanbindungen sich mit dem Internet zu verbinden. Beim Performancetest sind wir bei der Downloadgeschwindigkeit auf ca. 60 \% beider Internetanbindung gekommen. Die Uploadgeschwindigkeit war besser, hier haben wir 85 \% der Leistung beider Internetanbindungen bekommen. Die Latzzeit wurde um 2 ms schlechter als bei einer Internetanbindung ohne unseren Prototyp. Unser Prototyp ermöglicht eine unterbrechungsfreihe Internetverbindung auch wenn eine Internetanbindung ausfällt, dies passiert auch ohne Paketverlust.
