@@ -6,14 +6,14 @@
 
 Um unseren Treiber einfach bedienen zu können, haben wir eine grafische Benutzeroberfläche, kurz GUI, entwickelt. Durch ein simples und intuitives Design ermöglicht unsere Desktop-Anwendung das Verbinden mit einem Server, das Einsehen der aktuellen Netzgeschwindigkeit, sowie das Tätigen von Einstellungen mit nur wenigen Mausklicks. 
 \\ \ \\
-Anhand der in Kapitel 3.1.3 beschriebenen Vor-und Nachteile haben wir uns dazu entschieden, unsere grafische Benutzeroberfläche mit Windows Forms zu programmieren.
-Das GUI-Framework WPF bietet zwar eine größere Freiheit im Bezug auf das Designen, aber dadurch kann das Implementieren auch schnell unnötig kompliziert und aufwändig werden. Das Problem, das man bei der Auswahl der Elemente auf die Standard-Windows-Benutzerelemente beschränkt ist, kann mit einigen Tricks umgangen werden, sodass auch in WinForms die Bedienelemente komplett nach seinen eigenen Wünschen umgebaut und redesignet werden können.
+Anhand der in Kapitel 3.1.3 beschriebenen Vor- und Nachteile haben wir uns dazu entschieden, unsere grafische Benutzeroberfläche mit Windows Forms zu programmieren.
+Das GUI-Framework WPF bietet zwar eine größere Freiheit in Bezug auf das Designen, aber dadurch kann das Implementieren auch schnell unnötig kompliziert und aufwändig werden. Das Problem, das man bei der Auswahl der Elemente auf die Standard-Windows-Benutzerelemente beschränkt ist, kann mit einigen Tricks umgangen werden, sodass auch in WinForms die Bedienelemente komplett nach seinen eigenen Wünschen umgebaut und redesignet werden können.
 
 \section{Design und Funktionalität der Desktop-Anwendung}
 
 \subsection{Design und Funktionalität der Hauptseite}
 
-Nach dem Öffnen der Desktop-Anwendung soll es für den Benutzer möglich sein, eine Verbindung mit dem aus der Liste ausgewählten Server herzustellen beziehungsweise auch wieder die Verbindung zu trennen. Somit ist klar, dass wir für diese Funktionalität drei verschiedene Zustände benötigen:
+Nach dem Öffnen der Desktop-Anwendung soll es für den Benutzer möglich sein, eine Verbindung, mit dem aus der Liste ausgewählten Server, herzustellen beziehungsweise auch wieder die Verbindung zu trennen. Somit ist klar, dass wir für diese Funktionalität drei verschiedene Zustände benötigen:
 \\
 \begin{itemize}
  \item \textbf{Not Connected} (Nicht verbunden)
@@ -26,7 +26,7 @@ Nach dem Öffnen der Desktop-Anwendung soll es für den Benutzer möglich sein, 
 
 Um den aktuellen Verbindungszustand zu visualisieren, haben wir mithilfe von GIMP drei unterschiedliche Symbole erstellt. Jeder der drei Zustände soll ein jeweils eigenes Erscheinungsbild in Form von verschiedenen Farben, Animationen, sowie Funktionalitäten haben. 
 \\ \ \\
-Das Herstellen der Verbindung mit einem Server wird mithilfe einer Ladeanimation verbildlicht. Diese Animation wurde mit dem in GIMP integrierten GIF-Animator kreiert. Hierbei muss für jeden Frame des GIFs eine eigene Ebene erstellt werden. Wichtig ist, dass jede Ebene einen Name sowie eine positive Zahl in der Größeneinheit Millisekunden haben muss. Somit weis GIMP wie lang ein bestimmter Frame angezeigt werden soll. Beim exportieren muss noch angegeben werden, dass es sich bei den erstellten Einzelframes um eine Animation handelt. Weiters können noch Einstellungen über Pausen, Übergänge und Endlosschleifen getätigt werden.\footnote[1]{\cite[Vgl.][]{GIF}}
+Das Herstellen der Verbindung mit einem Server wird mithilfe einer Ladeanimation verbildlicht. Diese Animation wurde mit dem in GIMP integrierten GIF-Animator kreiert. Hierbei muss für jeden Frame des GIFs eine eigene Ebene erstellt werden. Wichtig ist, dass jede Ebene einen Name sowie eine positive Zahl in der Größeneinheit Millisekunden haben muss. Somit weiß GIMP wie lang ein bestimmter Frame angezeigt werden soll. Beim exportieren muss noch angegeben werden, dass es sich bei den erstellten Einzelframes um eine Animation handelt. Weiters können noch Einstellungen über Pausen, Übergänge und Endlosschleifen getätigt werden.\footnote[1]{\cite[Vgl.][]{GIF}}
 \\ \ \\
 In Abbildung 7.1 sieht man die Symbole der drei Zustände. Von links nach rechts symbolisieren sie Not Connected, Connecting und Connected.
 \\
@@ -50,10 +50,9 @@ In Abbildung 7.2 sind die Symbole der Internetgeschwindigkeit von keiner Verbind
 
 \subsubsection{Design des Zustandes Not Connected}
 
-Der Startzustand, welcher direkt nach dem Öffnen der Desktop-Anwendung angezeigt wird ist der Not Connected-Zustand. In diesem Zustand wird der Hintergrund mit der Farbe Rot angezeigt. Das Textfeld in der Mitte der Anwendung zeigt hierbei immer den aktuellen Zustand, in diesem Fall Not Connected, an. Weiters lassen das ausgegraute Verbindungssymbol in der Mitte, sowie das durchgestrichene Geschwindigkeitssymbol am rechten oberen Rand darauf schließen, dass man aktuell mit keinem Server verbunden ist.
-Der im unteren Teil der Desktop-Anwendung befindliche Connect-Button zeigt dem Benutzer mit dem Text Select Server, dass ein Server zum Verbinden ausgewählt werden muss.
+Der Startzustand, welcher direkt nach dem Öffnen der Desktop-Anwendung angezeigt wird, ist der Not Connected-Zustand. In diesem Zustand wird der Hintergrund mit der Farbe Rot angezeigt. Das Textfeld in der Mitte der Anwendung zeigt hierbei immer den aktuellen Zustand, in diesem Fall Not Connected, an. Weiters lassen das ausgegraute Verbindungssymbol in der Mitte sowie das durchgestrichene Geschwindigkeitssymbol am rechten oberen Rand darauf schließen, dass man aktuell mit keinem Server verbunden ist. Der im unteren Teil der Desktop-Anwendung befindliche Connect-Button zeigt dem Benutzer mit dem Text Select Server, dass ein Server zum Verbinden ausgewählt werden muss.
 \\ \ \\
-Mit einem Klick auf den Pfeil, welcher sich auf der rechten Seite des Connect-Buttons befindet, öffnet sich eine DropUp-Liste mit allen zuvor im Menü hinzugefügten Servern. Nachdem man den gewünschten Server ausgewählt hat ändert sich die Farbe des Button auf intensiveres Grün und der Text auf Connect to \textit{Servername}. Hiermit wird dem Benutzer signalisiert, dass nun durch einen Mausklick auf die Mitte des Buttons der Verbindungsaufbau mit dem gewählten Server gestartet werden kann.
+Mit einem Klick auf den Pfeil, welcher sich auf der rechten Seite des Connect-Buttons befindet, öffnet sich eine DropUp-Liste mit allen zuvor im Menü hinzugefügten Servern. Nachdem man den gewünschten Server ausgewählt hat, ändert sich die Farbe des Buttons auf ein intensiveres Grün und der Text auf Connect to \textit{Servername}. Hiermit wird dem Benutzer signalisiert, dass nun, durch einen Mausklick auf die Mitte des Buttons, der Verbindungsaufbau mit dem gewählten Server gestartet werden kann.
 \\
 \begin{figure}[H]
     \centering
@@ -67,7 +66,7 @@ Mit einem Klick auf den Pfeil, welcher sich auf der rechten Seite des Connect-Bu
 
 \subsubsection{Design des Zustandes Connecting}
 
-Startet der Benutzer den Verbindungsaufbau, wechselt die Desktop-Anwendung in den Zustand Connecting. Hier wird der Hintergrund in der Farbe Blau angezeigt. Weiters ändert sich die Farbe des Buttons zu Grau und der Pfeil, welcher die Serverauswahl öffnet, verschwindet. Somit kann in der Zeit des Verbindens kein neuer Server ausgewählt werden. Auch kann nicht auf das Menü-Icon, welches die Einstellungen öffnet, gedrückt werden. Das Textfeld in der Mitte der Anwendung zeigt nun Connecting an und die animierte Ladeanimation deutet darauf hin, dass sich der Treiber mit dem ausgewählten Server verbindet.
+Startet der Benutzer den Verbindungsaufbau, wechselt die Desktop-Anwendung in den Zustand Connecting. Hier wird der Hintergrund in der Farbe Blau angezeigt. Weiters ändert sich die Farbe des Buttons zu Grau und der Pfeil, welcher die Serverauswahl öffnet, verschwindet. Somit kann in der Zeit des Verbindens kein neuer Server ausgewählt werden. Auch kann nicht auf das Menü-Icon, welches die Einstellungen öffnet, gedrückt werden. Das Textfeld in der Mitte der Anwendung zeigt nun Connecting an und die Ladeanimation deutet darauf hin, dass sich der Treiber mit dem ausgewählten Server verbindet.
 \\
 \begin{figure}[H]
     \centering
@@ -79,7 +78,7 @@ Startet der Benutzer den Verbindungsaufbau, wechselt die Desktop-Anwendung in de
 
 \subsubsection{Design des Zustandes Connected}
 
-Nach einem erfolgreichen Verbindungsaufbau wechselt die Desktop-Anwendung in den dritten Zustand Connected. In diesem Zustand wird der Hintergrund in der Farbe Grün angezeigt. Das Textfeld in der Mitte der Anwendung sagt nun “Connected to Servername”. Weiters lässt das darüberliegende Verbindungssymbol darauf schließen, dass man mit dem Server verbunden ist. Der Connect-Button hat sich auf die Farbe Rot und der Text auf Disconnect geändert. Das im rechten oberen Eck der Desktop-Anwendung befindliche Internetgeschwindigkeitssymbol hat neben der visuellen Darstellung nun auch eine weitere Funktion. Wenn man mit der Maus über das Symbol fährt erscheint links daneben eine Anzeige, welches dem Benutzer Auskunft über die aktuelle Internetgeschwindigkeit im Format Megabit pro Sekunde sowie den aktuellen Ping im Format Millisekunden gibt.
+Nach einem erfolgreichen Verbindungsaufbau wechselt die Desktop-Anwendung in den dritten Zustand Connected. In diesem Zustand wird der Hintergrund in der Farbe Grün angezeigt. Das Textfeld in der Mitte der Anwendung sagt nun Connected to \textit{Servername}. Weiters lässt das darüberliegende Verbindungssymbol darauf schließen, dass man mit dem Server verbunden ist. Der Connect-Button hat sich auf die Farbe Rot und der Text auf Disconnect geändert. Das im rechten oberen Eck der Desktop-Anwendung befindliche Internetgeschwindigkeitssymbol hat, neben der visuellen Darstellung, nun auch eine weitere Funktion. Wenn man mit der Maus über das Symbol fährt erscheint links daneben eine Anzeige, welche dem Benutzer Auskunft über die aktuelle Internetgeschwindigkeit im Format Megabit pro Sekunde sowie den aktuellen Ping im Format Millisekunden gibt.
 \\
 \begin{figure}[H]
     \centering
@@ -91,7 +90,7 @@ Nach einem erfolgreichen Verbindungsaufbau wechselt die Desktop-Anwendung in den
 
 \subsubsection{Design des Fensters}
 
-Viele Komponenten der Desktop-Anwendung wie Buttons und Textfelder haben ein modernes Design mit abgerundeten Ecken. Um eine einheitliche Designsprache zu gewährleisten soll auch das Fenster runde Ecken bekommen. Hierfür muss die Dynamic Link Library Gdi32\footnote[1]{\cite[Vgl.][]{GDI}} von Windows importiert werden. Diese beinhaltet die Methode \mbox{CreateRoundRectRgn()}, mit welchem ein neues Fenster mit angegebener Ellipsengröße für die Ecken erstellt werden kann.
+Viele Komponenten der Desktop-Anwendung wie Buttons und Textfelder haben ein modernes Design mit abgerundeten Ecken. Um eine einheitliche Designsprache zu gewährleisten, soll auch das Fenster runde Ecken bekommen. Hierfür muss die Dynamic Link Library Gdi32\footnote[1]{\cite[Vgl.][]{GDI}} von Windows importiert werden. Diese beinhaltet die Methode \mbox{CreateRoundRectRgn()}, mit welchem ein neues Fenster, mit angegebener Ellipsengröße für die Ecken, erstellt werden kann.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -102,19 +101,19 @@ Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 10, 10));
 
 \subsection{Design und Funktionalität des Connect-Buttons}
 
-Der Connect-Button ist einer der wichtigsten Elemente der Desktop-Anwendung. Mithilfe diesem ist es möglich einen Server auszuwählen und sich mit diesem zu verbinden. Nach einem erfolgreichen Verbindungsaufbau kann man mit dem selben Button die Verbindung zum Server wieder trennen. Zusätzlich zur beschriebenen Funktionalität soll das Bedienelement über ein modernes Design mit abgerundeten Ecken verfügen.
+Der Connect-Button ist einer der wichtigsten Elemente der Desktop-Anwendung. Mithilfe diesem ist es möglich, einen Server auszuwählen und sich mit diesem zu verbinden. Nach einem erfolgreichen Verbindungsaufbau kann man, mit dem selben Button, die Verbindung zum Server wieder trennen. Zusätzlich zur beschriebenen Funktionalität soll das Bedienelement über ein modernes Design mit abgerundeten Ecken verfügen.
 \\ \ \\
-Möchte man nun einen Button mit genau diesen Anforderungen in die Realität umsetzen, stößt man in WinForms mit den Standard-Windows-Bedienelementen auf drei wesentliche Probleme.
+Möchte man nun einen Button mit genau diesen Anforderungen in die Realität umsetzen, stößt man in WinForms, mit den Standard-Windows-Bedienelementen, auf drei wesentliche Probleme:
 \\
 \begin{enumerate}
  \item Der Standard-Button von WinForms ist viereckig und es gibt keine Möglichkeit dies zu ändern.
- \item Der Button soll über ein DropUp-Menü verfügen, welches eine Liste von Servern beinhaltet. Weiters soll man durch einen Mausklick auf diesen einen der Server auswählen können um sich damit zu verbinden. WinForms bietet zwar für solche Fälle eine sogenannte ComboBox an, doch diese hat erstens nur ein DropDown-Menü und zweitens stößt man bei der Benutzung dieser Komponente auf ein weiteres, nun folgendes Problem.
- \item Der Button soll zweigeteilt sein. Das bedeutet dass durch das Klicken auf das Bedienelement einerseits das Verbinden mit einem Server, andererseit aber auch das Öffnen des DropUp-Menüs möglich sein muss. Somit muss je nach Position des Mauszeigers beim Klick auf den Button eine andere Funktionalität verfügbar sein was mit dem Standard-Button ebenfalls nicht umsetzbar ist.
+ \item Der Button soll über ein DropUp-Menü verfügen, welches eine Liste von Servern beinhaltet. Weiters soll man, durch einen Mausklick auf diesen, einen der Server auswählen können, um sich damit zu verbinden. WinForms bietet zwar für solche Fälle eine sogenannte ComboBox an, doch diese hat erstens nur ein DropDown-Menü und zweitens stößt man bei der Benutzung dieser Komponente auf ein weiteres, nun folgendes Problem.
+ \item Der Button soll zweigeteilt sein. Das bedeutet, dass durch das Klicken auf das Bedienelement einerseits das Verbinden mit einem Server, andererseits aber auch das Öffnen des DropUp-Menüs möglich sein muss. Somit muss, je nach Position des Mauszeigers, beim Klick auf den Button eine andere Funktionalität verfügbar sein, was mit dem Standard-Button ebenfalls nicht umsetzbar ist.
 \end{enumerate}
 \ \\
-Die von uns verwendete Dynamic Link Library MetroSuite bietet zwar einen eigenen sogenannten MetroButton bei welchem man per Einstellung die Kanten abrunden kann, doch die 2 anderen Probleme können auch mit der Benutzung der DLL nicht gelöst werden. Daher können wir die Standard-Windows-Bedienelemente nicht benutzen und müssen einen eigenen Button programmieren.
+Die von uns verwendete Dynamic Link Library MetroSuite bietet zwar einen eigenen, sogenannten MetroButton, bei welchem man per Einstellung die Kanten abrunden kann, doch die zwei anderen Probleme können auch mit der Benutzung der DLL nicht gelöst werden. Daher können wir die Standard-Windows-Bedienelemente nicht benutzen und müssen einen eigenen Button programmieren.
 \\ \ \\
-In Abbildung 7.6 sind das gewünschte Design und die Funktionalität des Connect-Buttons dargestellt.
+In Abbildung 7.6 ist das gewünschte Design und die Funktionalität des Connect-Buttons dargestellt.
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\textwidth]{connectButton.png}
@@ -123,9 +122,9 @@ In Abbildung 7.6 sind das gewünschte Design und die Funktionalität des Connect
 
 \subsubsection{Inhalt der Klasse Connect-Button}
 
-Um einen eigenen Button mit unseren Wünschen zu kreieren, haben wir eine eigene Klasse namens ConnectButton, welche von der Standard-Button-Klasse abgeleitet ist, geschrieben. Die Button-Klasse ist Teil des System.Windows.Form-Namespaces, welcher alle User-Interface-Komponenten von Windows beinhaltet. Somit benutzen wir die schon vorhandenen Funktionalitäten eines Windows-Buttons und ergänzen diese mit eigenen zusätzlichen Funktionen und einem neuen Design.
+Um einen eigenen Button mit unseren Wünschen zu kreieren, haben wir eine eigene Klasse namens ConnectButton, welche von der Standard-Button-Klasse abgeleitet ist, geschrieben. Die Button-Klasse ist Teil des System.Windows.Form-Namespaces, welcher alle User-Interface-Komponenten von Windows beinhaltet. Somit benützen wir die schon vorhandenen Funktionalitäten eines Windows-Buttons und ergänzen diese mit eigenen zusätzlichen Funktionen und einem neuen Design.
 \\ \ \\
-Zum Designen des neuen Buttons benutzen wir die Klasse GraphicsPath, welche Teil vom System.Drawing.Drawing2D-Namespace ist. Mithilfe dieser Klasse ist es möglich Formen und Figuren mit der integrierten Grafik-Engine zu erstellen. Hierfür stellt die Klasse eine Reihe an Methoden zur Verfügung, mit welchen man neue Formen zu seiner Figur hinzufügen kann. In unseren Fall wurde die beiden Methoden AddLine() und AddArc() verwendet. Mithilfe dieser konnte die Form eines Buttons mit vier Linien und vier runden Ecken nachgebildet werden.
+Zum Designen des neuen Buttons benutzen wir die Klasse GraphicsPath, welche Teil vom System.Drawing.Drawing2D-Namespace ist. Mithilfe dieser Klasse ist es möglich, Formen und Figuren mit der integrierten Grafik-Engine zu erstellen. Hierfür stellt die Klasse eine Reihe an Methoden zur Verfügung, mit welchen man neue Formen zu seiner Figur hinzufügen kann. In unseren Fall wurde die beiden Methoden AddLine() und AddArc() verwendet. Mithilfe dieser konnte die Form eines Buttons mit vier Linien und vier runden Ecken nachgebildet werden.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -135,7 +134,7 @@ graphPath.AddLine(x1, y1, x2, y2);
 \caption{Hinzufügen einer Linie zu einer Figur}
 \end{program}
 \noindent 
-Damit die erstellte Figure auch gezeichnet wird, muss noch die OnPaint-Methode der abgeleiteten Klasse Button überschrieben werden. In dieser Methode würde normalerweise der Standard-Windows-Button gezeichnet werden. Da hier aber jetzt unsere eigene Figure gezeichnet werden soll löschen wir das bestehende Design und zeichnen mit der Methode FillPath() die neue Figur.
+Damit die erstellte Figur auch gezeichnet wird, muss noch die OnPaint-Methode der abgeleiteten Klasse Button überschrieben werden. In dieser Methode würde normalerweise der Standard-Windows-Button gezeichnet werden. Da aber hier jetzt unsere eigene Figur gezeichnet werden soll, löschen wir das bestehende Design und zeichnen mit der Methode FillPath() die neue Figur.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -147,7 +146,7 @@ protected override void OnPaint(PaintEventArgs paintEvent)
 \caption{Zeichnen einer Figur}
 \end{program}
 \noindent 
-Wenn man nun den Connect-Button erstellt wird man bemerken, dass dieser vor allem in den Ecken nicht schön rund sondern eher verpixelt von der Grafik-Engine gezeichnet wurde. Um diesem Problem entgegenzuwirken müssen in der OnPaint()-Methode noch einige Einstellungen über die Renderqualität getätigt werden.
+Wenn man nun den Connect-Button erstellt wird man bemerken, dass dieser vor allem in den Ecken nicht schön rund, sondern eher verpixelt von der Grafik-Engine gezeichnet wird. Um diesem Problem entgegenzuwirken, müssen in der OnPaint()-Methode noch einige Einstellungen über die Renderqualität getätigt werden.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -159,9 +158,9 @@ paintEvent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 \caption{Beispiel-Code zum Verbessern der Renderqualität}
 \end{program}
 \noindent 
-Mithilfe dieser vier Methoden werden alle wichtigen, für die Zeichen- und Renderqualität verantwortlichen Parameter auf die maximale Qualität gestellt um die bestmögliche Grafik zu erzielen. 
+Mithilfe dieser vier Methoden werden alle wichtigen, für die Zeichen- und Renderqualität verantwortlichen Parameter auf die maximale Qualität gestellt, um die bestmögliche Grafik zu erzielen. 
 \\ \ \\
-Neben einem Text soll auf der rechten Seite des Connect-Buttons auch ein Pfeil angezeigt werden, welcher dem Benutzer zeigt, dass man mit einem Mausklick auf diesen die Drop-Up-Liste öffnen beziehungsweise schließen kann. Dieser Pfeil soll je nachdem ob die Liste gerade geöffnet oder geschlossen ist, nach oben oder nach links zeigen. Hierfür wurden zwei verschiedene Pfeile für die beiden Richtungen in Figma kreiert. Die beiden Grafiken werden mithilfe der Klasse Icon eingelesen und können dann mit der Methode DrawIcon() an einer bestimmten Stelle im Button gezeichnet werden. Wichtig hierbei ist, dass die eingebundenen Icons vom Typ .ico sein müssen! 
+Neben einem Text soll auf der rechten Seite des Connect-Buttons auch ein Pfeil angezeigt werden, welcher dem Benutzer zeigt, dass man mit einem Mausklick auf diesen, die Drop-Up-Liste öffnen beziehungsweise schließen kann. Dieser Pfeil soll, je nachdem ob die Liste gerade geöffnet oder geschlossen ist, nach oben oder nach links zeigen. Hierfür wurden zwei verschiedene Pfeile für die beiden Richtungen in Figma kreiert. Die beiden Grafiken werden mithilfe der Klasse Icon eingelesen und können dann mit der Methode DrawIcon() an einer bestimmten Stelle im Button gezeichnet werden. Wichtig hierbei ist, dass die eingebundenen Icons vom Typ .ico sein müssen! 
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -171,15 +170,15 @@ paintEvent.Graphics.DrawIcon(arrow , x, y);
 \caption{Zeichnen eines Icons}
 \end{program}
 \noindent 
-Da der Connect-Button durch das Klicken auf zwei verschiedene Stellen zwei verschiedene Funktionalitäten haben soll muss hier mit der Position des Mauszeigers beim Klick gearbeitet werden. Zuerst wird ein MouseUp-Event definiert, welches beim wieder Loslassen nach dem Drücken der linken Maustaste aktiviert wird. Nun kann mit MousePosition.X die X-Koordinate der aktuellen Position des Mauszeigers abgerufen werden. Mithilfe dieser Koordinate kann man überprüfen ob der Benutzer die Drop-Up-List aufrufen oder den Verbindungsaufbau starten möchte. Falls noch kein Server ausgewählt worden ist, ist der Mausklick zum Verbinden wirkungslos.
+Da der Connect-Button, durch das Klicken auf zwei verschiedene Stellen, zwei verschiedene Funktionalitäten haben soll, muss hier mit der Position des Mauszeigers beim Klick gearbeitet werden. Zuerst wird ein MouseUp-Event definiert, welches, nach drücken und wieder loslassen der linken Maustaste, aktiviert wird. Nun kann mit MousePosition.X die X-Koordinate der aktuellen Position des Mauszeigers abgerufen werden. Mithilfe dieser Koordinate kann man überprüfen, ob der Benutzer die Drop-Up-Liste aufrufen oder den Verbindungsaufbau starten möchte. Falls noch kein Server ausgewählt worden ist, ist der Mausklick zum Verbinden wirkungslos.
 
 \subsubsection{Design und Funktionalität der Drop-Up-Liste}
 
-Die Drop-Up-Liste soll die Möglichkeit bieten einen Server auszuwählen, um sich mit diesem zu verbinden. Hierfür verwenden wir die ListBox von WinForms. Diese Komponente ermöglicht standardmäßig das Hinzufügen von Einträgen, das Auswählen dieser, sowie das Nutzen einer Scrollbar. Zusätzlich dazu wurde auch dieses UI-Element an unserer Wünsche angepasst und um einige Funktionalitäten erweitert. Das Ziel ist, genauso wie beim Connect-Button, das Design zu verbessern. Die Änderungen umfassen das Anpassen der Schriftart/-größe und der Position, sowie das Verhalten beim Auswählen eines Servers durch einen Mausklick auf diesen.
+Die Drop-Up-Liste soll die Möglichkeit bieten einen Server auszuwählen, um sich mit diesem zu verbinden. Hierfür verwenden wir die ListBox von WinForms. Diese Komponente ermöglicht standardmäßig das Hinzufügen von Einträgen, das Auswählen dieser sowie das Nutzen einer Scrollbar. Zusätzlich dazu wurde auch dieses UI-Element an unsere Wünsche angepasst und um einige Funktionalitäten erweitert. Das Ziel ist, genauso wie beim Connect-Button, das Design zu verbessern. Die Änderungen umfassen das Anpassen der Schriftart/-größe und der Position sowie das Verhalten beim Auswählen eines Servers durch einen Mausklick auf diesen.
 \\ \ \\
-Um die gewünschten Änderungen umzusetzen muss nicht wie beim Connect-Button eine eigene Klasse erstellt und die OnPaint()-Methode überschrieben werden. Hierfür gibt es das ListBox-Event DrawItem. Mithilfe von Events und Delegates ist es also möglich eine eigene Methode zu schreiben, mit welcher man die Elemente der ListBox selbst zeichnen kann. Wichtig zu erwähnen ist, dass wenn man diese Methode verwenden möchte, vorher noch die Option DrawMode der ListBox auf OwnerDrawFixed gestellt werden muss!
+Um die gewünschten Änderungen umzusetzen muss keine, wie beim Connect-Button, eigene Klasse erstellt und die OnPaint()-Methode überschrieben werden. Hierfür gibt es das ListBox-Event DrawItem. Mithilfe von Events und Delegates ist es also möglich, eine eigene Methode zu schreiben, mit welcher man die Elemente der ListBox selbst zeichnen kann. Wichtig zu erwähnen ist, dass wenn man diese Methode verwenden möchte, vorher noch die Option DrawMode der ListBox auf OwnerDrawFixed gestellt werden muss!
 \\ \ \\
-Nun haben wir die Möglichkeit, das Verhalten beim Auswählen eines Listenelementes zu definieren. Hierfür wird mit einem If-Anweisung überprüft ob das Listenelement ausgewählt wurde. Falls das der Fall ist, wird die Schriftart auf Fett geändert und die Schriftfarbe auf Grün.
+Nun haben wir die Möglichkeit, das Verhalten beim Auswählen eines Listenelementes zu definieren. Hierfür wird mit einer If-Anweisung überprüft ob das Listenelement ausgewählt wurde. Falls das der Fall ist, wird die Schriftart auf Fett geändert und die Schriftfarbe auf Grün.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -191,7 +190,7 @@ if (drawEvent.State == DrawItemState.Selected)
 \caption{Ändern der Eigenschaften eines ausgewählten Listenelements}
 \end{program}
 \noindent
-Nach dem Definieren aller weiteren Parameter, wie Standard-Schriftart, -farbe und -größe muss das Listenelement noch gezeichnet werden. Hierfür kommt die Methode DrawString() zum Einsatz. Da hier auch Informationen über die Position angegeben werden müssen, kann so auch gleich definiert werden, dass das Element mittig in der ListBox zentriert gezeichnet werden soll.
+Nach dem Definieren aller weiteren Parameter wie Standard-Schriftart, -farbe und -größe muss das Listenelement noch gezeichnet werden. Hierfür kommt die Methode DrawString() zum Einsatz. Da hier auch Informationen über die Position angegeben werden müssen, kann so auch gleich definiert werden, dass das Element mittig in der ListBox zentriert gezeichnet werden soll.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -203,7 +202,7 @@ drawEvent.Graphics.DrawString(text, font, brush, x, y);
 Zum Einstellen des Abstandes zwischen den Listenelementen gibt es die ListBox-Eigenschaft ItemHeight. Mithilfe dieser kann der gewünschte Wert definiert werden. Hierfür muss aber die Option DrawMode der ListBox auf OwnerDrawVariable gestellt werden.
 
 \subsection{Design und Funktionalität des Menüs}
-Mit einem Mausklick auf das Icon in der linken oberen Ecke der Desktop-Anwendung gelangt man in das Menü. Hier können wichtige Einstellungen getätigt werden. Das Menü ist in die drei Menüpunkte Mode, Server und Network Devices unterteilt. Jeder der Menüpunkte wird durch ein eigenes, zur Einstellungsmöglichkeit passendes, Icon repräsentiert. Diese wurden in Figma erstellt. Mit einem Klick auf den jeweiligen Unterpunkt kommt man zu deren spezifischen Einstellungen. Um das Menü wieder zu verlassen, muss man auf den Schließen-Button, welcher sich oben links befindet klicken.
+Mit einem Mausklick auf das Icon in der linken oberen Ecke der Desktop-Anwendung gelangt man in das Menü. Hier können wichtige Einstellungen getätigt werden. Das Menü ist in die drei Menüpunkte Mode, Server und Network Devices unterteilt. Jeder der Menüpunkte wird durch ein eigenes, zur Einstellungsmöglichkeit passendes, Icon repräsentiert. Diese wurden in Figma erstellt. Mit einem Klick auf den jeweiligen Unterpunkt kommt man zu deren spezifischen Einstellungen. Um das Menü wieder zu verlassen, muss man auf den Schließen-Button, welcher sich oben links befindet, klicken.
 \\
 \begin{figure}[H]
     \centering
@@ -216,7 +215,7 @@ Mit einem Mausklick auf das Icon in der linken oberen Ecke der Desktop-Anwendung
 \pagebreak
 \subsubsection{Design des Menüpunktes Mode}
 
-Bei den Modus-Einstellungen, kann man definieren in welchem Modus der Treiber laufen soll. Man soll zwischen dem Perfomance-basierenden und Kostenbasierenden Modus auswählen können. Da wir uns im Rahmen der Diplomarbeit ausschließlich auf den ersten der beiden Modis konzentrieren dient der Menüpunkt Mode aktuell nur als Beschreibung des Kosten-basierenden Modus. Der ausgegraute Button mit dem Text “Selected” unterhalb der Kurzbeschreibung zeigt dem Benutzer, dass akutell dieser Modus ausgewählt ist. Mit einem Klick Mausklick auf den Pfeil links oben kommt man wieder in die Einstellungsübersicht zurück.
+Bei den Modus-Einstellungen, kann man definieren in welchem Modus der Treiber laufen soll. Man soll zwischen perfomancebasierendem und kostenbasierendem Modus auswählen können. Da wir uns im Rahmen der Diplomarbeit ausschließlich auf den ersten der beiden Modis konzentrieren, dient der Menüpunkt Mode aktuell nur als Beschreibung des perfomancebasierenden Modus. Der ausgegraute Button mit dem Text “Selected” unterhalb der Kurzbeschreibung zeigt dem Benutzer, dass akutell dieser Modus ausgewählt ist. Mit einem Mausklick auf den Pfeil links oben kommt man wieder in die Einstellungsübersicht zurück.
 \\
 \begin{figure}[H]
     \centering
@@ -228,8 +227,8 @@ Bei den Modus-Einstellungen, kann man definieren in welchem Modus der Treiber la
 
 \subsubsection{Design des Menüpunktes Server}
 
-Bei den Server-Einstellungen hat der Benutzer die Möglichkeit, Server zu verwalten.
-Im oberen Bereich mit der Aufschrift “Add Server” kann man einen neuen Server hinzuzufügen. Hier muss der Name, welcher frei wählbar ist, die IP-Adresse und der Post des Servers eingetragen werden. Mit einem Klick auf “Add” wird der Server in die darunterliegende Liste hinzugefügt. Im unteren Bereich namens “Server List” werden alle gespeicherten Server angezeigt. Mit einem Mausklick auf einen Server wird die Schriftart Fett und die Schriftfarbe Blau angezeigt. Somit wurde der Server als Default-Server festgelegt. Mit dem Löschen-Button, welcher sich unterhalb der Liste befindet, kann ein ausgewählter Server wieder von der Liste entfernt werden.
+Bei den Server-Einstellungen hat der Benutzer die Möglichkeit Server zu verwalten.
+Im oberen Bereich, mit der Aufschrift Add Server, kann man einen neuen Server hinzufügen. Hier muss der Name, welcher frei wählbar ist, die IP-Adresse und der Post des Servers eingetragen werden. Mit einem Klick auf Add wird der Server in die darunterliegende Liste hinzugefügt. Im unteren Bereich namens Server List werden alle gespeicherten Server angezeigt. Mit einem Mausklick auf einen Server wird die Schriftart Fett und die Schriftfarbe Blau angezeigt. Somit wurde der Server als Default-Server festgelegt. Mit dem Löschen-Button, welcher sich unterhalb der Liste befindet, kann ein ausgewählter Server wieder von der Liste entfernt werden.
 \\
 \begin{figure}[H]
     \centering
@@ -239,12 +238,12 @@ Im oberen Bereich mit der Aufschrift “Add Server” kann man einen neuen Serve
     \caption{Design des Menüpunktes Server} 
 \end{figure}
 \noindent
-WinForms bietet keine Möglichkeit, das Verhalten bei der Auswahl eines Listenelementes zu ändern. Daher kamen genauso wie bei der Drop-Up-Liste des ConnectButtons Event, Delegates und die Methode DrawItem() zum Einsatz um die Listenelement manuell zu zeichnen. Nur so konnte das Ändern der Schrifteigenschaften möglich gemacht werden.
+WinForms bietet keine Möglichkeit das Verhalten bei der Auswahl eines Listenelementes zu ändern. Daher kamen, genauso wie bei der Drop-Up-Liste des ConnectButtons, Events, Delegates und die Methode DrawItem() zum Einsatz, um die Listenelemente manuell zu zeichnen. Nur so konnte das Ändern der Schrifteigenschaften möglich gemacht werden.
 
 \subsubsection{Speichern der Serverliste}
 Da zur Serverliste hinzugefügte Server auch nach dem Schließen und einem erneuten Öffnen der Desktop-Anwendung noch zur Verfügung stehen sollen, müssen wichtige Einstellungen wie die Serverliste gespeichert werden. Hierfür benutzen wird den System.Text.Json-Namespace welcher es ermöglicht, Objekte ins JSON-Format zu serialisieren und vom JSON-Format wieder in Objekte zu deserialisieren.
 \\ \ \\
-Zur Speicherung relevante ist eine Liste mit allen Servern, welche wiederum aus den drei Attributen Name, IP-Adresse und Port bestehen. Um diese Daten einfach zu speichern und später wieder auslesen zu können haben wir eine Klasse namens ServerObject erstellt, welche die drei Attribute beinhaltet. Eine zweite Klasse ServerSettings speichert diese Server-Objekte in einer Liste.
+Zur Speicherung relevant ist eine Liste mit allen Servern, welche wiederum aus den drei Attributen Name, IP-Adresse und Port bestehen. Um diese Daten einfach zu speichern und später wieder auslesen zu können haben wir eine Klasse namens ServerObject erstellt, welche die drei Attribute beinhaltet. Eine zweite Klasse ServerSettings speichert diese Server-Objekte in einer Liste.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -260,7 +259,7 @@ public class ServerObject
 \noindent
 Wird nun ein neuer Server in der Desktop-Anwendung hinzugefügt, wird ein neues Server-Objekt erstellt und in die Serverliste hinzugefügt. Sollte ein bestehender Server gelöscht werden, wird das Server-Objekt wieder aus der Liste entfernt.
 \\ \ \\
-Schließt der Benutzer nun die Desktop-Anwendung werden mögliche Änderungen in der Serverliste gespeichert werden. Hierfür kommt der im System.Text.Json-Namespace enthaltene JsonSerializer zum Einsatz. Dieser serialisiert ein ServerSettings-Objekt, welches die Liste mit allen Servern-Objekten beinhaltet, zu einem JSON-Text. Dieser wird dann in eine Datei names serverSettings.json im selben Verzeichnis wo auch die .exe-Datei liegt gespeichert.
+Schließt der Benutzer nun die Desktop-Anwendung werden mögliche Änderungen in der Serverliste gespeichert. Hierfür kommt der im System.Text.Json-Namespace enthaltene JsonSerializer zum Einsatz. Dieser serialisiert ein ServerSettings-Objekt, welches die Liste mit allen Servern-Objekten beinhaltet, zu einem JSON-Text. Dieser wird dann in eine Datei names serverSettings.json, im selben Verzeichnis wo auch die .exe-Datei liegt, gespeichert.
 
 \begin{program}[H]
 \begin{CSharpCode}
@@ -279,11 +278,11 @@ serverSettings = JsonSerializer.Deserialize<ServerSettings>(settings);
 \caption{Deserialisieren des eingelesenen JSON-Textes}
 \end{program}
 \noindent
-Nachdem das einlesen erfolgreich abgeschlossen wurde, werden die Serverliste im Menü sowie die Drop-Up-List vom Connect-Button mit den gespeicherten Einstellungen befüllt.
+Nachdem das Einlesen erfolgreich abgeschlossen wurde, werden die Serverliste im Menü sowie die Drop-Up-List vom Connect-Button mit den gespeicherten Einstellungen befüllt.
 
 \subsubsection{Design des Menüpunktes Network Devices}
 
-Bei den Netzwerkadapter-Einstellungen kann der Benutzer die Netzwerkadapter verwalten. Hierfür werden im Bereich mit der Aufschrift \grqq Network Devices List\grqq{} alle verfügbaren Netzwerkadapter aufgelistet. Durch einen Mausklick auf einen Listeneintrag wird die Schriftart Fett und die Schriftfarbe Blau. Somit wurde der Netzwerkadapter ausgewählt und wird nun vom Treiber verwendet. Mit einem erneuten Klick kann dieser auch wieder abgewählt werden. Für die Erweiterung des Kosten-basierenden Modus, würde noch die Angabe der Kosten pro Megabyte hinzukommen.
+Bei den Netzwerkadapter-Einstellungen kann der Benutzer die Netzwerkadapter verwalten. Hierfür werden, im Bereich mit der Aufschrift Network Devices List, alle verfügbaren Netzwerkadapter aufgelistet. Durch einen Mausklick auf einen Listeneintrag wird die Schriftart Fett und die Schriftfarbe Blau. Somit wurde der Netzwerkadapter ausgewählt und wird nun vom Treiber verwendet. Mit einem erneuten Klick kann dieser auch wieder abgewählt werden. Für die Erweiterung des kostenbasierenden Modus, würde noch die Angabe der Kosten pro Megabyte hinzukommen.
 \\
 \begin{figure}[H]
     \centering
@@ -603,11 +602,11 @@ Die Anfrage an den Mult-Wan Bonding fähigen Treiber wird automatisch gesendet, 
 
 \section{Windows-Service zur Crash-Recovery des Treibers}
 
-Ein Windows-Service, zu deutsch Windows-Systemdienst, ist ein Programm welches als Dienst im Hintergrund einer Windows-Sitzung läuft\footnote[1]{\cite[Vgl.][]{WindowsService}}. Somit eignet sich ein Windows-Service perfekt für unseren Treiber, welcher immer im Hintergrund laufen, aber den Benutzer nicht stören soll. Weiters soll dieser, bei einem möglichen Absturz, automatisch vom Service neu gestartet werden.
+Ein Windows-Service, zu Deutsch Windows-Systemdienst, ist ein Programm, welches als Dienst im Hintergrund einer Windows-Sitzung läuft\footnote[1]{\cite[Vgl.][]{WindowsService}}. Somit eignet sich ein Windows-Service perfekt für unseren Treiber, welcher immer im Hintergrund laufen, aber den Benutzer nicht stören soll. Weiters soll dieser, bei einem möglichen Absturz, automatisch vom Service neu gestartet werden.
 
 \subsection{Starten des Treibers}
 
-Beim Starten unseres Treibers in Form einer .exe-Datei muss bedacht werden, dass seit der Windows Version Vista ein Windows-Service nicht mehr mit dem Desktop interagieren kann. Das bedeutet, dass der Systemdienst keine Programme mit grafischer Oberfläche starten kann. Da unser Treiber keine grafischen Elemente besitzt kann dieser mit der Angabe von zusätzlichen Parametern gestartet werden.
+Beim Starten unseres Treibers in Form einer .exe-Datei muss bedacht werden, dass, seit der Windows Version Vista, ein Windows-Service nicht mehr mit dem Desktop interagieren kann. Das bedeutet, dass der Systemdienst keine Programme mit grafischer Oberfläche starten kann. Da unser Treiber keine grafischen Elemente besitzt, kann dieser mit der Angabe von zusätzlichen Parametern gestartet werden.
 Mit dem Kofigurieren der Parameter CreateNoWindow und UseShellExecute weiß der Windows-Service, dass keine grafische Oberfläche sowie Shell vom Treiber benutzt wird.
 
 \begin{program}[H]
@@ -626,4 +625,4 @@ Process process = Process.Start(info);
 
 \subsection{Crash-Recovery}
 
-Damit sichergestellt werden kann, dass der Treiber immer verfügbar ist, muss im Windows-Service eine Crash-Recovery eingebaut werden. Diese überprüft ob das Programm noch läuft und startet gegebenenfalls den Treiber neu. Das laufende Programm kann mithilfe von \mbox{Process.GetProcessesByName("netshare.exe")} gefunden und somit überprüft werden.
+Damit sichergestellt werden kann, dass der Treiber immer verfügbar ist, muss im Windows-Service eine Crash-Recovery eingebaut werden. Diese überprüft, ob das Programm noch läuft und startet gegebenenfalls den Treiber neu. Das laufende Programm kann mithilfe von \mbox{Process.GetProcessesByName("netshare.exe")} gefunden und somit überprüft werden.
