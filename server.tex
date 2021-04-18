@@ -379,6 +379,42 @@ Physisch könnte man sich das nachfolgende Beispiel so vorstellen als hätte man
 \end{program}
 \noindent
 \subsection{Kommunikation mit unserem Multi-Wan Bonding Windows-Treiber}
-Zur Kommunikation zwischen dem Proxy Server und dem Windows Treiber verwenden wir die normale Linux Socket API. Wir setzen hier auf UDP Datagrams. Wie wir schon im vorherigen Abschnitt über den TUN/TAP Treiber lernen konnten sind die größten IP-Pakete mit denen wir rechnen müssen 1500 Bytes groß. Bei der Kommunikation zwischen Server und Windows Treiber machen wir nun nichts anderes als ein UDP Datagram zu verschicken welches als Nutzdaten das IP-Paket enthält welches wir von dem TUN Interface bekommen haben. Genauso läuft es auch in die andere Richtung. Empfangen wir ein UDP Datagram bei unserem Server nehmen wir einfach die Nutzdaten und übergeben sie mit einem write() Systemaufruf an das TUN Interface. Dabei ist uns egal von wo dieses UDP Datagram ursprünglich herkommt. Es werden einfach alle eingehenden Datagrams auf Port 5555 genommen und deren Nutzdaten an den virtuellen Netzwerkadapter übergeben ohne weitere verarbeitungsschritte dazwischen. 
+Zur Kommunikation zwischen dem Proxy Server und dem Windows Treiber verwenden wir die normale Linux Socket API. Wir setzen hier auf UDP Datagrams. Wie wir schon im vorherigen Abschnitt über den TUN/TAP Treiber lernen konnten sind die größten IP-Pakete mit denen wir rechnen müssen 1500 Bytes groß. Bei der Kommunikation zwischen Server und Windows Treiber machen wir nun nichts anderes als ein UDP Datagram zu verschicken welches als Nutzdaten das IP-Paket enthält welches wir von dem TUN Interface bekommen haben. Genauso läuft es auch in die andere Richtung. 
 \\\\
-Der Port und die IP-Adresse des Absenders des Datagrams wird in einem Set zwischengespeichert. 
+Empfangen wir ein UDP Datagram bei unserem Server nehmen wir einfach die Nutzdaten und übergeben sie mit einem write() Systemaufruf an das TUN Interface. Dabei ist uns egal von wo dieses UDP Datagram ursprünglich herkommt. Es werden einfach alle eingehenden Datagrams auf Port 5555 genommen und deren Nutzdaten an den virtuellen Netzwerkadapter übergeben ohne weitere verarbeitungsschritte dazwischen. 
+\\\\
+Der Port und die IP-Adresse des Absenders des Datagrams wird in einem Set zwischengespeichert. Lesen wir nun mit einem read() Systemaufruf ein IP-Paket aus dem TUN Interface wird einfach zufällig ein Endpunkt(IP-Adresse und Port) aus dem Set ausgewählt und das IP-Paket mittels sendto() Systemaufruf als UDP Datagram an den Windows Treiber gesendet. Hier gibt es vermutlich noch einigen Freiraum an Verbesserung. So könnten wir Beispielsweiße nicht allen Verbindungen zum Server die selbe Warscheinlichkeit für eine Antwort geben sondern anhand von Bandbreite oder Ping Zeit unterschiedliche Warscheinlichkeiten vergeben. Auch könnte man vielleicht zusammengehörige Pakete beisammenhalten um TCP Reinfolgenfehler zu vermeiden.
+\\\\
+Um unter C/C++ auf einem UDP Port zu lauschen müssen wir zuerst wieder einen Dateideskriptor erstellen. Dies tun wir im Fall von Sockets mittels des socket() Systemaufrufs. Dieser erstellt uns einen Endpunkt zu Kommunikation und gibt uns einen Dateideskriptor der auf diesen Zeigt. socket() erwartet drei Parameter:
+\\\\
+Prototyp: int socket(int domain, int type, int protocol);
+\begin{enumerate}
+    \item \textbf{int domain}: Gibt an um welche Kommunikationsdomaine es sich Handelt. Dies kann Beispielsweiße IPv4, IPv6 aber auch genau so gut Bluetooth sein. In unserem Fall wird es sich um IPv4 Handeln.
+    \item \textbf{int type}: Beschreibt die Semantik der Kommunikation. Jenachdem was wir hier angeben können wir mittels Streams, Datagrams, Paketen oder SEQPaketen kommunizieren.
+    \item \textbf{int protocol}: Hier geben wir das Kommunikationsprotokoll an. Entweder TCP, UDP oder weitere andere je nachdem welche domain und type wir verwenden. In unserem Fall verwenden wir UDP.
+    \item \textbf{Rückgabe}: Zurückgegeben wird uns der Dateideskriptor des sockets.
+\end{enumerate} 
+\ \\%https://man7.org/linux/man-pages/man2/socket.2.html
+Nachdem wir unseren Dateideskriptor erhalten haben hat der socket aber noch keine IP-Adresse oder ähnliches. Mittels bind() Systemaufruf können wir nun dem Socket eine IP-Adresse zuweißen. Diese Operation wird traditionel als Namensgebung des Sockets bezeichnet. bind() erwartet 3 Parameter.
+\\\\
+Prototyp: int bind(int sockfd, const struct sockaddr *addr, socklen\_t addrlen);
+\begin{enumerate}
+    \item \textbf{int sockfd}: Der Dateideskriptor des Sockets.
+    \item \textbf{const struct sockaddr *addr}: Hier wird die eigentliche Adresse übergebn und um welche Adressfamilie es sich Handelt. 
+    \item \textbf{socklen\_t addrlen}: Hier übergeben wir die Länge der Adresse diese hängt unter anderem von der Adressfamilie ab.
+    \item \textbf{Rückgabe}: 0 wenn erfolgreich gesetzt. -1 im Fehlerfall.
+\end{enumerate} 
+\ \\%https://man7.org/linux/man-pages/man2/bind.2.html
+Unser socket ist damit Fertig alles was wir jetzt noch machen müssen ist mittels recvfrom() Daten aus dem Socket zu lesen. Im Falle unserer Serverimplementierung wird davor aber noch mit einem select() Systemaufruf überprüft ob es Daten zu lesen gibt. Für gewöhnlich wird ein recv() Systemaufruf verwendet dies ist hier aber ausnahmsweiße nicht der Fall da wir keine Verbindung zu einem fixen Enterfnten Endpunkt haben sondern von vielen verschiedenen Endpunkten Daten empfangen können.
+\\\\
+Prototyp: ssize\_t recvfrom(int sockfd, void *buf, size\_t len, int flags, struct sockaddr *src\_addr, socklen\_t *addrlen);
+\begin{enumerate}
+    \item \textbf{int sockfd}: Der Dateideskriptor des Sockets.
+    \item \textbf{void *buf}: Ein Zeiger auf das char array welches die empfangenen Daten nachher beinhalten soll. 
+    \item \textbf{size\_t len}: Gibt die größe des Buffers an in den wir lesen möchten.
+    \item \textbf{int flags}: Damit lassen sich eigenschaften von recvfrom() ändern. Beispielsweiße ob es ein blockierender Aufruf ist oder nicht.
+    \item \textbf{struct sockaddr *src\_addr}: Hier übergeben wir einen Zeiger zu einem socketaddr struct in welches recvfrom() beim Empfangen die Absender Adresse schreibt.
+    \item \textbf{ssocklen\_t *addrlen}: Ein Zeiger auf die länge der Adresse. Der Inhalt wird entsprechend der Absenderadresse geändert.
+    \item \textbf{Rückgabe}: 0 wenn Verbindung ordnungsgemäß getrennt. Anzahl der Bytes wenn welche empfangen wurden. -1 im Fehlerfall.
+\end{enumerate} 
+\ \\%https://linux.die.net/man/2/recvfrom
