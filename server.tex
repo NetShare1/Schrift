@@ -105,4 +105,280 @@ Nun durchqueren das Datagram vermutlich noch die NAT Wall des Nutzers bevor es v
 
 
 \section{Implementierung des Multi-Wan Bonding Proxy Servers}
-\subsection{Erstellen und verwalten eines virtuellen Netzwerkadapters unter Linux}
+\subsection{Notwendigkeit eines virtuellen Netzwerkadapters}
+Zur implementierung unseres Multi-Wan Bonding Servers ist ein virtueller Netzwerkadapter notwendig. Der Grund dafür ist das es für uns keine andere möglichkeit gibt Datenpakete in ihrer roh Form, in unserem Fall byte arrays, von dem System zu bekommen oder zu übergeben. 
+\\\\
+Anwendungen verwenden für gewöhnlich entsprechende "System Calls" um die Netzwerk Funktionalitäten des Betriebsystems zu verwenden. Anders würde es auch nicht gut gehen da Anwendungen die direkt mit der Hardware kommunizieren ein Sicherheitsrisiko darstellen würden.
+\\\\
+Natürlich wäre es für uns auch möglich gewesen eine eigene API ohne virtuellen Netzwerkadapter zu erstellen, dies würde jedoch dazu führen das NetShare nur von jenen Applikationen verwendet werden könnte die unsere API implementieren. Um nun von allen Arten von Applikationen Datenpakete zu erhalten ist es also Notwendig die selben Netzwerkschnittstellen zu verwenden wie es auch eben jene Applikationen tun.  
+\\\\
+Zwar müssen wir nur bei unserem Windows Treiber auf fremd Anwendungen achten aber auch bei unserem Proxy Server bringt uns dieses vorgehen einige Vorteile. Wir müssten Beispielsweiße NAT selbst implementieren. Da wir jedoch einen virtuellen Netzwerkadapter auch auf der Seite des Servers verwenden, können wir von bereits vorhandenen Implementierungen NATs gebrauch machen. Weiters eröffnet uns dies die Möglichkeit den Server einfach mit bereits vorhandener Netzwerksoftware zu erweitern, wie Beispielsweiße um eine Firewall.
+\subsection{Treiber für virtuelle Netzwerkkarten im Linux Kernel}
+Der Linux-Kernel enthält Standardmäßig einen sogenannten TUN/TAP Treiber. Dieser TUN/TAP Treiber erlaubt es "User Space" Programmen Zugriff auf rohe Netzwerkübertragungen zu nehmen. Dies ist der Fall da es einem ermöglicht wird virtuelle TUN/TAP Netzwerkadapter zu erstellen.
+Virtuell bedeutet in diesem Fall das die erzeugten Netzwerkadapter nicht, wie gewöhnlich, physische Hardwaregeräte im Rechner sind, sondern nur virtuell im Kernel existieren. Sie besitzen somit keine physische Komponente. Abseits davon gibt es aber keinen unterschied zu einem physischen Adapter, es können wie gewohnt IP-Adressen, Subnetz etc konfiguriert werden.
+\\\\
+Dies bedeutet das Übertragungen die den virtuellen Adapter betreten nicht wie gewöhnlich als bits und bytes über ein Kabel, Funk oder ähnliches übertragen werden. Sondern stattdessen werden die Daten einer Anwendung als Bytestream zur Verfügung gestellt. Die Anwendung bekommt dabei einen "File descriptor" von diesem "File descriptor" kann die Anwendung sowohl lesen als auch schreiben. Es gilt dabei jedoch zu beachten das man nicht beliebige dinge in den Adapter schreiben kann, es muss sich entsprechend formatierte Pakete oder Frames handeln. Für das Betriebsystem selbst sieht es so aus als würde der Adapter wie gewöhnlich per Funk oder Kabel seine Daten lesen/schreiben.
+\\\\
+Es gibt bei TUN/TAP 2 Grundlegend unterschiedliche Modi. Der Unterschied besteht darin was wir am Ende von dem Adapter lesen beziehungsweise schreiben können. Die 2 Modi werden vom Namen schon angedeutet. Es gibt den TUN Modus und den TAP Modus. Mit welchem dieser beiden Modi der Netzwerkadapter am Ende arbeitet wird mittels eines Flags beim erstellen des Adapters festgelegt.
+\\
+\begin{description}
+    \item[TAP - Netzwerk-Wasserhahn] TAP steht im Englischen für Wasserhahn und circa genau so Arbeitet auch ein TAP Gerät.
+    Ein virtueller Netzwerkadapter der auf TAP Konfiguriert ist agiert auf OSI Schicht 2. 
+    Beim lesen von dem virtuellen Adapter werden nur vollständige Ethernet-Frames gelesen und beim schreiben werden entsprechend auch nur vollständige Ethernet-Frames akzeptiert.
+    \\
+    \item[TUN - Netzwerk-Tunnel] TUN steht nicht wie TAP für einen Englischen Begriff sondern ist nur eine Abkürzung für Netzwerktunnel. 
+    Ist ein virtueller Netzwerkadapter auf TUN konfiguriert Arbeitet er im gegensatz zu TAP nicht auf Schicht 2 sondern auf Schicht 3. Das bedeutet das er beim lesen nur vollständige IP-Pakete anbietet aber auch nicht mehr. Wärend er beim schreiben auch nur vollständige IP-Pakete akzeptiert. 
+\end{description}
+\
+
+\subsubsection{Lebensdauer eines TUN/TAP Geräts}
+Es TUN/TAP Gerät kann für 2 verschiedene Arten von Lebensdauer erstellt werden. Dabei gibt es eine kurzlebige variante und eine langlebige Variante. Die kurzlebige Variante heißt "transient" und die langlebige "persistent".
+\\
+\begin{description}
+    \item[Transient] Ein Netzwerkadapter der "transient" ist wird von dem selben Prozess erstellt und auch gelöscht. Spätestens wenn sich der besitzende Prozess beendet wird auch der virtuelle Adapter zerstört.
+    \item[Persistent] Ein virtueller Adapter der "persistent" ist ist wie der name schon sagt langlebig und existiert auch nach beenden des erstellendem Prozesses noch. Andere Prozesse können sich dann später mit dem Adapter verbinden und ihn verwenden. Damit der virtuelle Netzwerkadapter verschwindet muss er explizit gelöscht werden.
+\end{description}
+
+\subsubsection{Erstellen und verwalten eines TUN/TAP Geräts}
+Um eine virtuelles TUN/TAP Gerät zu erstellen ist es notwendig die entsprechenden Rechte zu besitzen. Traditionelle UNIX Implementierungen unterscheiden grundsätzlich zwischen zwei Arten von Prozessen. Privilegierte Prozesse und unprivilegierte Prozesse. Die effektive UID eines privilegierten Prozesses ist immer 0 was bedeutet das er mit root Rechten gestartet wurde. Privilegierte Prozesse umgehen alle Berechtigungsüberprüfungen des Betriebsystems. 
+\\\\
+Seit Linux Kernel 2.2 wurden die Berechtigungen die sonst nur einem privilegiertem Prozess zur verfügung stehen weiter in einzelne Berechtigungen verfeinert. Die einzelnen Berechtigungen haben den Namen "Capabilities" und können auf einer per Thread Basis vergeben werden.
+\\\\
+Insgesamt gibt es 42 dieser Capabilities aber für das erstellen eines virtuellen Netzwerkadapters wird nur eine davon benötigt, nämlich \textbf{CAP\_NET\_ADMIN}. Diese Fähigkeit (Capability) erlaubt es einem Thread, neben dem erstellen eines virtuellen Adapters auch noch:
+\\
+\begin{enumerate}
+    \item Netzwerkadapter zu konfigurieren
+    \item Die Administration einer IP Firewall
+    \item Die Routing Tabelle zu bearbeiten
+    \item Sich an jede IP Adresse zu binden
+    \item Den TOS (Type of Service) zu setzen 
+    \item Treiber Statistiken zu bereinigen
+    \item Einen Adapter in den "promiscuous mode" zu setzen
+    \item Multicasting zu aktivieren
+    \item Einige Socketoptionen zu setzen
+\end{enumerate} 
+% https://man7.org/linux/man-pages/man7/capabilities.7.html 
+% https://backreference.org/2010/03/26/tuntap-interface-tutorial/
+\ \\
+Um nun tatsächlich ein TUN/TAP Gerät zu erstellen müssen wir zuerst auf das sogenante \textbf{clone device} zugreifen. Dieses befindet sich Standardmäßig unter \textbf{/dev/net/tun}.
+\\\\
+Dafür holen wir uns zuerst mit dem \textbf{open(\dq/dev/net/\dq, O\_RDWR);} Systemaufruf einen Dateideskriptor. Jetzt können wir mittels \textbf{ioctl(fd, TUNSETIFF, (void *) \&ifr);} Systemaufruf einen neuen Adapter erstellen.
+\\\\
+Der ioctl() Systemaufruf erlaubt es IO Geräte zu steuern. Dies geschieht indem unterliegende Geräte parameter manipuliert werden. Übergeben werden in unserem speziellen Fall zuerst der Dateideskriptor, dann die Konstante TUNSETIFF und zuguterletzt ein Zeiger zu einem ifreq struct das folgendermaßen aufgebaut ist:
+
+\begin{program}[H]
+    \begin{CppCode}
+        struct ifreq {
+            char ifr_name[IFNAMSIZ]; /* Interface name */
+            union {
+                struct sockaddr ifr_addr;
+                struct sockaddr ifr_dstaddr;
+                struct sockaddr ifr_broadaddr;
+                struct sockaddr ifr_netmask;
+                struct sockaddr ifr_hwaddr;
+                short           ifr_flags;
+                int             ifr_ifindex;
+                int             ifr_metric;
+                int             ifr_mtu;
+                struct ifmap    ifr_map;
+                char            ifr_slave[IFNAMSIZ];
+                char            ifr_newname[IFNAMSIZ];
+                char           *ifr_data;
+            };
+        };
+    \end{CppCode}
+\end{program}
+\noindent
+% https://man7.org/linux/man-pages/man7/netdevice.7.html
+Die einzigen Felder die für uns beim erstellen relevant sind, sind ifr\_flags und ifr\_name. Bei ifr\_name Handelt es sich um den Namen des Netzwerkadapters welcher auch später bei ifconfig angezeigt wird. Wird kein Name angegeben wird ein generischer Name aller tun0 oder tap20 gewählt. Wärend ifr\_flags definiert ob es sich um ein TUN oder ein TAP Gerät handelt. Da es bei unserem Multi-Wan Proxy Server keinen Grund gibt Schicht 2 Protokolle wie ARP etc zu unterstützen, verwenden kein TAP Gerät sondern ein TUN Gerät welches nur IP-Pakete überträgt. 
+\\\\ 
+Wird unser ioctl() Systemaufruf erfolgreich abgeschlossen dann wurde der virtuelle Netzwerkadapter erstellt und der Dateideskriptor den wir zuvor erhalten haben kann nun verwendet werden um damit zu Kommunizieren. Hier vollständiger Beispielcode zum anlegen eines virtuellen Adapters:
+\begin{program}[H]
+    \begin{CppCode}
+        #include <linux /if.h>
+        #include <linux /if_tun.h>
+        
+        int tun_alloc(char *dev, int flags) {
+          struct ifreq ifr;
+          int fd;
+          int error_code;
+          char *clone_dev = "/dev/net/tun";
+        
+           /* Holen des Dateideskriptor vom clone device */
+           if( (fd = open(clone_dev, O_RDWR)) < 0 ) {
+             return fd;
+           }
+        
+           /* Löscht alles an Inhalt aus dem struct */
+           memset(&ifr, 0, sizeof(ifr));
+        
+           /* Das flag ist entweder IFF_TUN oder IFF_TAP
+            * wobei auch noch IFF_NO_PI dazu geodert 
+            * werden kann um Paket Informatioenn zu 
+            * unterdrücken.
+            */
+           ifr.ifr_flags = flags;   
+        
+           /* Kopieren des Namen in das struct Fals angegeben */
+           if (*dev) {
+             strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+           }
+        
+           /* Hier wird dann versucht den Adapter zu erstellen */
+           if( (error_code = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ) {
+             close(fd);
+             return error_code;
+           }
+        
+          /* Nachdem das Gerät erstellt wurde wird nun
+           * der Name aus dem struct kopiert. Dies ist 
+           * Notwendig für die Situation in der kein Name
+           * angegeben wurde. Desswegen muss auch immer 
+           * ein Speicherbereich für den dev Zeiger 
+           * übergeben werden.
+           */
+          strcpy(dev, ifr.ifr_name);
+        
+          /* Am Ende geben wir nur mehr den Dateideskriptor zurück 
+           * den wir von nun an für alle weitere Kommunikation
+           * mit dem Adapter verwenden.
+           */
+          return fd;
+        }
+    \end{CppCode}
+\end{program}
+\noindent
+Der Adapter ist jetzt aber noch nicht persistent sonder erstmal nur transient. Um dies zu ändern erfordert es einige weitere ioctl() Aufrufe. Wir könnten den Adapter in diesen zustand aber schon ohne Probleme verwenden.
+\\\\
+Um das Netzwerkinterface jetzt auch noch persistent zu machen werden im normalfall zwei ioctl() Systemaufrufe gemacht. Mit dem ersten Aufruf machen wir des Netzwerkgerät tatsächlich schon persistent. Jedoch reicht das oft noch nicht. Der Code zum erstellen und zum einhängen in einen bereits vorhandenen Netzwerkadapter ist identisch, das bedeutet aber auch das die Berechtigungen identisch sein müssen. Wir wollen den Multi-Wan Bonding Proxy Server aber nicht immer mit root Berechtigungen laufen lassen da dies ein mögliches Sicherheitsrisiko darstellt. Die änderung des Besitzers und der Persistenz muss aber noch mit root Rechten erfolgen.
+\\\\
+Hier kommt uns der zweite ioctl() Aufruf zur Hilfe, dieser erlaubt es uns den Besitzer des virtuellen Netzwerkadapters zu einem nicht root Nutzer zu ändern, was es diesem ermöglicht zugriff zu nehmen. Zum löschen des Netzwerkadapters reicht es aus den Adapter wieder transient zu machen und den Prozess zu beenden. Hier Beispielcode zur Persistentmachung eines virtuellen Netzwerkadapters:
+\begin{program}[H]
+    \begin{CppCode}
+        if(ioctl(tap_fd, TUNSETPERSIST, 1) < 0){
+            perror("enabeling TUNSETPERSIST");
+            exit(1);
+        }
+        
+        int owner{1002}; // UID des neuen Besitzers
+        if(ioctl(tap_fd, TUNSETOWNER, owner) < 0){
+            perror("TUNSETOWNER");
+            exit(1);
+        }
+
+        // Loeschen eines virtuellen Netzwerkadapters
+        if(ioctl(tap_fd, TUNSETPERSIST, 0) < 0){
+            perror("disabling TUNSETPERSIST");
+        }
+        exit(0);
+    \end{CppCode}
+\end{program}
+\noindent
+Ein Prozess der nun mit der effektiven UID des Adapterbesitzers läuft kann nun mit dem selben Code mit dem normal ein virtueller Netzwerkadapter erstellt wird diesen einhängen. Dabei ist zu beachten das dazu versucht werden muss einen Netzwerkadapter mit genau demselben Namen zu erstellen, wie der für den wir Rechte bekommen haben hat. Generell sollte man versuchen einen weiteren Adapter mit dem selben Namen zu erstellen wir der bereits existierende einfach nur eingehangen sofern man ausreichende Berechtigungen hat.
+
+\subsubsection{Lesen und schreiben von einem TUN/TAP Gerät}
+Zum lesen und schreiben verwenden wir einfach den read() und write() Systemaufruf. Diese werden für das Lesen und schreiben von praktisch alles Geräten und Datein verwendet. 
+\\
+\begin{description}
+    \item[read() - Systemaufruf] Bei read() werden drei Parameter übergeben. Zuerst der Dateideskriptor von dem wir lesen möchten, dann ein Zeiger auf einen char Array Buffer und zuguterletzt die Anzahl der zu lesenden Bytes. read() blockiert bis die gewünschte Anzahl an Bytes in den Buffer gelesen wurde oder wir an das Dateiende kommen beziehungsweise bis es zu einem Fehler kommt. Ist read() erfolgreich wird die Anzahl an gelesenen Bytes zurückgegeben, im Fehlerfall wird ein Fehlercode kleiner 0 zurückgegeben.
+    \\% https://man7.org/linux/man-pages/man2/read.2.html
+    \item[write() - Systemaufruf] Es werden dabei wie auch bei read() der Dateideskriptor, char array Zeiger und größe übergeben. write() blockiert solange bis die Anzahl an bytes per größe übergeben aus dem char array gelesen und in die Datei geschrieben wurden oder ein größen limit der Datei erreicht wurde. Sollte es zu einem Fehler kommen wird auch hier eine Zahl kleiner 0 zurückgegeben, sonst wird die Anzahl der geschriebenen Bytes zurückgegeben.
+    % https://man7.org/linux/man-pages/man2/write.2.html
+\end{description}
+\ \\
+Da wir vermeiden möchten Datenpakete zu halbieren oder zumindest nicht vollständig zu lesen und zu schreiben. Müssen wir rücksicht auf die Maximum transmission unit (MTU) des virtuellen Netzwerkadapters nehmen. Die MTU beschreibt die größe der größten möglichen Protokoll Daten Einheit und steht in Verbindung zu der maximalen Frame größe die auf OSI Schicht 2 übertragen werden kann. Bei Ethernet beträgt die MTU 1500 Bytes vorrausgesetzt Jumboframes sind nicht aktiviert was bei unserem virtuellen Adapter nicht der Fall ist.
+\\\\
+Wir schreiben und lesen von unserem virtuellen Netzwerkadapter also immer maximal 1500 Bytes so können wir sicher gehen das wir immer vollständige Datenpakete entgegennehmen und schreiben.
+\\\\
+Physisch könnte man sich das nachfolgende Beispiel so vorstellen als hätte man in einem Rechner zwei Ethernet Netzwerkadapter und würde beide mit einem Patchkabel miteinander verbinden. Es ist zwar nicht besonders sinnvoll dies zu tun aber wir können so gut zeigen wie das schreiben und lesen von einem virtuellen Adapter funktioniert. Im Beispiel wird auch ein select() Systemaufruf verwendet um zu überprüfen ob in einem der beiden virtuellen Netzwerkadaptern gerade Datenpakete verfügbar sind und nur dann wird versucht zu lesen. 
+\begin{program}[H]
+    \begin{CppCode}
+        char tun_name1[IFNAMSIZ];
+        char tun_name2[IFNAMSIZ];
+        char* buffer = new char[1500]; /* MTU größe */
+        int tun_fd1, tun_fd2;
+  
+        /* Erstellen oder einhängen des TUN Adapters */
+        strcpy(tun_name1, "tun1");
+        tun_fd1 = tun_alloc(tun_name1, IFF_TUN | IFF_NO_PI);
+
+        /* Erstellen oder einhängen des zweiten TUN Adapters */
+        strcpy(tun_name2, "tun2");
+        tun_fd2 = tun_alloc(tun_name2, IFF_TUN | IFF_NO_PI);
+      
+        if(tun_fd1 < 0 || tun_fd2 < 0){
+          perror("Fehler beim erstellen/einhängen.");
+          exit(1);
+        }
+      
+        /* Daten lesen und schreiben. */
+        uint16_t nread, nwrite;
+        int maxfd = (tun_fd1 > tun_fd12) ? tun_fd1 : tun_fd2;
+        while(1) {
+            int ret;
+            fd_set rd_set;
+        
+            FD_ZERO(&rd_set);
+            FD_SET(tun_fd1, &rd_set); FD_SET(tun_fd2, &rd_set);
+
+            /* Warten auf änderungen bei einem der beiden Dateideskriptoren */
+            ret = select(maxfd + 1, &rd_set, nullptr, nullptr, nullptr);
+        
+            if (ret < 0 && errno == EINTR) {
+              continue;
+            }
+        
+            if (ret < 0) {
+              perror("select()");
+              exit(1);
+            }
+
+            // Lesen von tun1 und schreiben in tun2 wenn Inhalt in tun1
+            if(FD_ISSET(tun_fd1, &rd_set)) {
+                nread = read(tun_fd1, buffer, sizeof(buffer));
+                if(nread < 0) {
+                    perror("Lesen vom Interface");
+                    close(tun_fd1); close(tun_fd2);
+                    exit(1);
+                }
+                printf("Gelesen %d bytes von Gerät %s\n", nread, tun_name1);
+
+                nwrite = write(tun_fd2, buffer, nread);
+                if(nwrite < 0) {
+                    perror("Schreiben zum Interface");
+                    close(tun_fd1); close(tun_fd2);
+                    exit(1);
+                }
+                printf("Geschrieben %d bytes in Gerät %s\n", nwrite, tun_name2);
+            }
+    \end{CppCode}
+\end{program}
+\noindent
+\begin{program}[H]
+    \begin{CppCode}
+        // Lesen von tun2 und schreiben in tun1 wenn Inhalt in tun2
+        if(FD_ISSET(tun_fd2, &rd_set)) {
+            nread = read(tun_fd2, buffer, sizeof(buffer));
+            if(nread < 0) {
+                perror("Lesen vom Interface");
+                close(tun_fd1); close(tun_fd2);
+                exit(1);
+            }
+            printf("Gelesen %d bytes von Gerät %s\n", nread, tun_name2);
+
+            nwrite = write(tun_fd1, buffer, nread);
+            if(nwrite < 0) {
+                perror("Schreiben zum Interface");
+                close(tun_fd1); close(tun_fd2);
+                exit(1);
+            }
+            printf("Geschrieben %d bytes in Gerät %s\n", nwrite, tun_name1);
+        }
+    }
+    \end{CppCode}
+\end{program}
+\noindent
+\subsection{Kommunikation mit unserem Multi-Wan Bonding Windows-Treiber}
+Zur Kommunikation zwischen dem Proxy Server und dem Windows Treiber verwenden wir die normale Linux Socket API. Wir setzen hier auf UDP Datagrams. Wie wir schon im vorherigen Abschnitt über den TUN/TAP Treiber lernen konnten sind die größten IP-Pakete mit denen wir rechnen müssen 1500 Bytes groß. Bei der Kommunikation zwischen Server und Windows Treiber machen wir nun nichts anderes als ein UDP Datagram zu verschicken welches als Nutzdaten das IP-Paket enthält welches wir von dem TUN Interface bekommen haben. Genauso läuft es auch in die andere Richtung. Empfangen wir ein UDP Datagram bei unserem Server nehmen wir einfach die Nutzdaten und übergeben sie mit einem write() Systemaufruf an das TUN Interface. Dabei ist uns egal von wo dieses UDP Datagram ursprünglich herkommt. Es werden einfach alle eingehenden Datagrams auf Port 5555 genommen und deren Nutzdaten an den virtuellen Netzwerkadapter übergeben ohne weitere verarbeitungsschritte dazwischen. 
+\\\\
+Der Port und die IP-Adresse des Absenders des Datagrams wird in einem Set zwischengespeichert. 
