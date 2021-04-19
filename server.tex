@@ -1,2 +1,505 @@
-\chapter{Server}
-\label{cha:Server}
+\chapter{Multi-Wan Bonding Proxy Server}
+\label{cha:Multi-WanBondingProxyServer}
+
+\section{Anforderungen des Multi-Wan Bonding fähigen Proxy Servers}
+Unser Multi-Wan Bonding Proxy Server ist dafür verantwortlich, Datenpakete des Windows Treibers zu Empfangen, Zusammenzuführen und Antwortpakete aus dem Internet aufzuteilen, um diese an den Windows Treiber zurück zu senden. Dafür müssen folgende Probleme gelöst werden:
+\\
+\begin{enumerate}
+    \item Sammeln von IP-Paketen von mehreren Absendeadressen für dasselbe Ziel.
+    \item Aufteilen von IP-Paketen aus dem Internet auf mehrere Verbindungen desselben Empfängers.
+    \item NAT Anwenden auf ein und ausgehende IP-Pakete.
+\end{enumerate}
+\ \\
+Weiters handelt es sich bei unserem Multi-Wan Bonding Proxy Server um einen Endpunkt für die zu bündelnten Internetverbindungen. Aufgeteilte Datenpakete treffen von verschiedenen Verbindungen beim Server ein und werden wieder zu einem einzelnen Datenstrom zusammengeführt. Antworten an unseren Proxy Server werden ebenfalls entsprechend wieder aufgeteilt und an die verschiedenen WAN-Anbindungen des Nutzers gesendet. 
+\\\\
+Außerdem müssen gewisse Standards von Performance, Stabilität und Ressourcenanforderungen eingehalten werden. Hierbei gilt:
+\\
+\begin{enumerate}
+    \item Maximale prozentuale CPU Auslastung von 5 {\%}, bei einer 100 Mbit/s Übertragungsrate auf einem AMD Ryzen 7 3700X
+    \item Nicht mehr als 300 Megabyte RAM-Bedarf höchstens.
+\end{enumerate}
+
+\newpage
+\section{Server Infrastruktur}
+\subsection{Betriebssystem}
+Wir haben uns bei der Wahl des Server Betriebsystems für Linux/Debian 8 entschieden. Dafür gibt es einige Gründe:
+\\
+\begin{enumerate}
+    \item Der Linuxkernel besitzt bereits standardmäßig einen TUN/TAP Treiber, der die Entwicklung des Servers um einiges vereinfacht. Bei Windows müsste erst ein eigener Treiber geschreiben bzw. eine externe Bibliothek verwendet werden, um einen virtuellen Netzwerkadapter zu erstellen. Dies ist unter Linux nicht notwendig.
+    \item Mittels iptables ist es nur ein minimaler Aufwand NAT auf einen Netzwerkadapter anzuwenden. 
+    \item Debian ist im Vergleich zu Windows um einiges "leichter". Damit sinken die Leistungsanforderungen an das Hostsystem erheblich. Debian benötigt beispielsweise keinen Desktop. Der Proxy Server selbst ist auch sehr leistungsschonend, weshalb hier schon ein älterer Raspberry PI ausreichen würde.
+\end{enumerate}
+\ \\
+Es gibt aber viele Linux Distributionen, die diese Funktionalitäten haben. Warum haben wir uns also speziell für Debian 8 entschieden? Die beliebtesten Serverbetriebsysteme sind aktuell Debian, Ubuntu, CentOS und Windows ohne spezielle Reihenfolge. Die Entscheidung fiel auf Debian, weil es sich nicht nur um eine der am weitesten verbreiteten Distributionen handelt, sondern auch, weil es viele andere Distributionen gibt, die auf Debian aufbauen. Ubuntu ist eine davon. Dies erlaubt unserem Server auf einer Vielzahl an Betriebsystemen ohne hohem Aufwand zu laufen. Wir sind uns aber ziemlich sicher, dass es auch unter anderen Linux Distributionen keine großen Probleme geben sollte, sofern der Source-Code extra für dieses kompiliert wird.
+
+\subsection{Hardware}
+Die Anforderungen an die Hardware sind minimal. Selbst ein schwaches Hostsystem kann unseren  Proxy Server ohne Probleme betreiben. 1GB Arbeitsspeicher ist mehr als ausreichend und mit 2GHz CPU Takt sollten bereits höhere Datenübertragungsraten ohne Probleme möglich sein. 
+\\\\ 
+Die höchste Relevanz für die Leistung unseres Proxy Servers hat die single core Leistung des Rechners. Besonders, wenn Datenraten von über 100Mbit/s das Ziel sind, sollte darauf geachtet werden.
+\\\\
+Die Internetanbindung ist von besonders hoher Relevanz. Die Summer aller mit dem Server verbundenen Nutzer kann zusammen nie eine höhere Übertragungsrate als der Hostrechner erreichen. 
+\\\\
+Festplattenspeicher wird praktisch keiner benötigt. Schon ein paar MB sind ausreichend, um den Server in Betrieb zu nehmen. Vorrausgesetzt, es werden keine Logfiles gespeichert.
+
+
+\section{Kommunikation zwischen Server und Client}
+\subsection{Der Weg eines Datenpakets von Client zu Server}
+Möchte eine Anwendung etwas aus dem Internet abrufen, so sendet diese Datenpakete aus. Diese enthalten jeweils eine Absender IP-Adresse, eine Ziel IP-Adresse, Nutzdaten und weitere Metainformationen. Diese Datenpakete müssen nun ihren Weg von der Anwendung bis zum Ziel-Server bestreiten. 
+\\\\
+Dabei werden sie, nachdem sie von der Anwendung an das Betriebsystem übergeben wurden, geroutet. Beim Routing wird für ein Datenpaket anhand der Ziel IP-Adresse ein passender Netzwerkadapter gesucht, an den das Datenpaket übergeben wird. Gibt es keine spezielle Route für diese IP-Adresse, wird die sogenante Standard-Route genommen. Die Standard-Route führt im Normalfall zu einem Router, der oft erheblich mehr als nur simples Routing ins Internet betreibt. 
+\\\\
+Praktisch immer ist auf diesen Haushalts-Routern eine NAT Funktion aktiviert. Sollte unser Datenpaket nicht für das lokale Netzwerk bestimmt sein und damit wieder die Standard-Route angewandt werden, muss es hier nun eine NAT Wall durchqueren. Dabei ändert sich die Absender IP-Adresse zur öffentlichen IP-Adresse des Routers bevor das Datenpaket ins Internet weitergeleitet wird. Die Ziel IP-Adresse wird später auf die öffentliche IP-Adresse des Routers antworten.
+\\\\
+Um nun mehrere verschiedene Internetverbindungen zu bündeln, müssen  Datenpakete für das selbe Ziel über verschiedene Netzwerkadapter hinausgesendet werden. Dies wird in unserem Fall von unserem Windows Treiber erledigt. Dieser leitet Datenpakete für die Standard-Route zu sich und teilt diese dann auf die physische Netzwerkadapter auf. Dies alleine ist hier aber nicht genug, da dann beim Zielrechner zusammengehörende Datenpakete von verschiedenen IP-Adressen ankommen würden. 
+\\\\
+Normale Server sind für diese Art der Kommunikation nicht ausgelegt. Besonders sehr Session behaftete Dienste wie FTP sollten hier große  Probleme haben. FTP schickt nicht mit jedem Datenpaket die Information mit, zu welchem aktuell verbundenem FTP-Nutzer dieses Datenpaket gehört. Kommt nun ein Datenpaket von einer anderen IP-Adresse und sogar von einem anderen Port, hat ein FTP-Server keine Möglichkeit festzustellen, zu welchem Nutzer diese Daten gehört haben. 
+\\\\
+Um dieses Problem zu behandeln, haben wir einen Multi-Wan Bonding Proxy Server entwickeln müssen. Anstelle die Datenpakete einfach nur auf die Netzwerkadapter aufzuteilen, verpackt unser Windows Treiber sie zuvor in eigenen Datenpaketen, die an unseren Proxy Server adressiert sind. Unser Server ist darauf ausgelegt, von mehreren verschiedenen IP-Adressen und Ports Datenpakete zu empfanden. 
+\newpage
+\noindent
+Woher weiß unser Server welches Datenpaket zu welchem Nutzer gehört? Der Windows Treiber hat einen virtuellen Netzwerkadapter. Dieser hat eine IP-Adresse. Diese IP-Adresse können wir verwenden, um verschiedene Nutzer zu unterscheiden. Aktuell haben wir aber noch keine explizite Mehrbenutzerfähigkeit eingebaut. Trotzdem ist es zumindest erforderlich, dass sich die IP-Adresse des virtuellen Netzwerkadapters des Nutzers im selben Subnetz befindet, wie die IP-Adresse des virtuellen Netzwerkadapters des Servers. Sonst werden die entpackten Datenpakete des Nutzers nicht vom virtuellen Netzwerkadapter des Servers akzeptiert.
+\\\\
+Der Server nimmt die verpackten Datenpakte, entpackt diese, wendet NAT auf sie an, um sie dann mit seiner eigenen IP-Adresse als Absender an die Ziel-Adresse zu versenden.
+
+\subsection{Der Weg eines Datenpakets von Server zu Client}
+Sendet ein Zielrechner aus dem Internet eine Antwort auf eine Anfrage unseres Proxy Servers, so wird auf diese bei der Ankunft NAT angewendet. Nach dem Durchschreiten der NAT Wall erhält das Datenpaket eine neue Ziel-Adresse, nämlich jene die beim Senden der Anfrage vom Nutzer noch unsere Absenderadresse war.
+\\\\
+Die Absenderadresse war ursprünglich die IP-Adresse des virtuellen Netzwerkadapters unseres Windows Treibers. Anhand dieser Ziel IP-Adresse könnte der Server nun feststellen, an welchen Nutzer er das Paket zurück senden muss bzw. an welche der verschiedenen eingehenden Verbindungen und an welche nicht. Da Multiusersupport aber in dem Prototypen noch nicht enthalten ist, wird eine Antwort aktuell einfach auf alle vorhandenen Verbindungen aufgeteilt. Die Empfänger IP-Adresse muss aber trotzdem wieder korrekt gesetzt werden, da sonst der virtuelle Netzwerkadapter des Clients das Datenpaket nicht akzeptieren würde.
+\\\\
+Nach dem Durchqueren der NAT Wall werden die Datenpakete nun einfach wieder verpackt und an die Internetadressen und Ports zurück gesendet, von denen ursprünglich die Anfrage stammte.
+\\\\
+Nun landen die Datenpakete wieder beim Router des Nutzers. Bei diesem wird beim Durchqueren der NAT Wall die öffentliche IP-Adresse des Nutzers wieder gegen die lokale IP-Adresse ersetzt und an das Datenpaket an den Rechner des Nutzers gerouted.
+\\\\ 
+Beim Rechner des Nutzers werden diese Datenpakete wieder vom Windows Treiber entpackt und an den virtuellen Netzwerkadapter übergeben, der die Datenpakte wiederum an die ursprüngliche Applikation zurückführt.
+
+\newpage
+\section{Architektur des Multi-Wan Bonding fähigen Proxy Servers}
+\subsection{Sammeln von IP-Paketen von verschiedenen Absendern}
+Um IP-Pakete, die von unserem Windows Treiber kommen, entgegennehmen zu können, lauscht der Proxy Server standardmäßig auf Port 5555 nach UDP Datagrams. 
+\\\\
+Jedes dieser Datagrams enthält wiederum ein IP-Paket des Windows Treibers als Nutzdaten. Das IP-Paket im Inneren des Datagrams wird nun durch den Server verarbeitet.
+\\\\
+Die Nutzdaten sind aber nicht die einzig wichtigen Informationen in dem Datagram. Der Server speichert auch den Endpunkt, von dem das Datagram gekommen ist. Dies ist notwendig, da davon ausgegangen werden muss, dass eine NAT Wall zwischen dem Windows Treiber und Server ist. Durch eine NAT Wall ändert sich jedoch der Absende-Port und die IP-Adresse. Um später also Daten auch zurückschicken zu können, ist es notwendig, sich Port und IP-Adresse zu merken. Ein fixer Port kann somit beim zurückschicken nicht genommen werden.
+\\\\ 
+Rücksicht auf einen eventuell beschädigten Inhalt des Datagrams muss ebenfalls nicht genommen werden. Um die Fehlerbehandlung kümmert sich das TCP im Inneren der Nutzdaten des Datagrams. Tatsächlich wäre es ein Problem, TCP und nicht UDP zur Übertragung zu verwenden, da dann meistens TCP Pakete über eine TCP Verbindung gesendet werden würden. Dies würde zu einem sogenannten TCP Meltdown führen.
+
+\subsection{Senden der gesammelten IP-Pakete des Windows Treibers}
+Die Nutzdaten der gesammelten Datagrams sind selbst wieder IP-Pakete. Diese werden als Byte Array an den virtuellen Netzwerkadapter übergben. Die Datenpakete betreten den virtuellen Netzwerkadapter hierbei von der selben Seite wie es bei einem physischen Netzwerkadapter die Bits und Bytes über das Patch Kabel würden.
+\\\\  
+Danach wird das Datenpaket gerouted. In den meisten Fällen wird es wohl ein Paket für das Internet sein, es kann sich aber auch um ein Paket für die IP-Adresse des virtuellen Netzwerkadapters des Servers handeln oder für die öffentliche IP-Adresse des Servers. Sollte an dem Server noch ein weiteres Netzwerk hängen, so kann das Paket auch für dieses sein. Ist es jedoch für das Internet bestimmt, wird die Standard Route gewählt, die zum Netzwerkadapter ins Internet führt. 
+\\\\
+Nachdem das Paket nun gerouted wurde, kommt es hier vor dem Versenden ins Internet noch zur Anwendung von NAT. Der Grund dafür ist, dass die IP-Adresse des Servers nun sowohl vom Server selbst als auch von den Nutzern des Proxy Servers verwendet wird. Während dieses NAT Prozesses wird die Absender IP-Adresse gegen die öffentliche IP-Adresse des Servers getauscht. Danach verlässt das Datenpaket unseren Server ins Internet.
+
+\newpage
+\subsection{Entgegennehmen von Antwort Paketen aus dem Internet}
+Antworten aus dem Internet werden direkt nach dem Eintreffen beim Server wieder durch die NAT Wall gezogen. Dabei wird die Ziel IP-Adresse, die bis zu diesem Punkt die öffentliche IP-Adresse des Servers war, gegen die lokale IP-Adresse des virtuellen Netzwerkadapters des Windows Treibers eingetauscht.
+\\\\ 
+Nun wird das Datenpaket gerouted. Da das Routing-Ziel die IP-Adresse des   virtuellen Netzwerkadapters des Windows Treibers ist, wird das Datenpaket an den virtuellen Netzwerkadapter des Servers übergeben. Dies geschieht da sich der virtuelle Netzwerkadapter des Servers und des Windows Treibers im selben Subnetz befinden müssen.  
+\\\\
+Nach der Entgegennahme durch den virtuellen Netzwerkadapter erhalten wir das IP-Paket als Byte Array, das wir nun wieder an den Windows Treiber senden müssen.
+
+\subsection{Senden von Antwort Paketen an den Windows Treiber}
+Jene Datenpakete, die als Byte Arrays aus dem virtuellen Netzwerkadapter gezogen wurden, werden über die ganz normale UDP Socket API unter Linux an den Windows Treiber gesendet. 
+\\\\
+Dabei wird wieder ein Datagram erstellt und das IP-Paket als Nutzdaten verwendet, das als Byte Array vorliegt. Als Zieladresse und Ziel-Port wird einer der Endpunkte verwendet, der beim Empfangen der Anfragen erhalten wurde.
+\\\\
+Nun durchquert das Datagram vermutlich noch die NAT Wall des Nutzers bevor es vom Windows Treiber weiter verarbeitet wird. 
+
+
+\section{Implementierung des Multi-Wan Bonding Proxy Servers}
+\subsection{Notwendigkeit eines virtuellen Netzwerkadapters}
+Zur Implementierung unseres Multi-Wan Bonding Servers ist ein virtueller Netzwerkadapter notwendig. Der Grund dafür ist, dass es für uns keine andere Möglichkeit gibt, Datenpakete in ihrer Rohform, in unserem Fall byte arrays, von dem System zu bekommen oder zu übergeben. 
+\\\\
+Anwendungen greifen für gewöhnlich auf entsprechende Systemaufrufe zurück, um die Netzwerkfunktionalitäten des Betriebsystems zu verwenden. Anders würde es auch nicht gut gehen, da Anwendungen, die direkt mit der Hardware kommunizieren, ein Sicherheitsrisiko darstellen würden.
+\\\\
+Natürlich wäre es für uns auch möglich gewesen, eine eigene API ohne virtuellen Netzwerkadapter zu erstellen. Dies würde jedoch dazu führen, das NetShare nur von jenen Applikationen verwendet werden könnte, die unsere API implementieren. Um nun von allen Arten von Applikationen Datenpakete zu erhalten, ist es also notwendig, dieselben Netzwerkschnittstellen zu verwenden, wie es auch eben jene Applikationen tun.  
+\newpage
+\noindent
+Zwar müssen wir nur bei unserem Windows Treiber auf Fremdanwendungen achten, aber auch bei unserem Proxy Server bringt uns dieses Vorgehen einige Vorteile. Wir müssten beispielsweise NAT selbst implementieren. Da wir jedoch einen virtuellen Netzwerkadapter auf der Seite des Servers verwenden, können wir von bereits vorhandenen Implementierungen NATs Gebrauch machen. Weiters eröffnet uns dies die Möglichkeit, den Server einfach mit bereits vorhandener Netzwerksoftware zu erweitern, wie beispielsweise um eine Firewall.
+\subsection{Treiber für virtuelle Netzwerkkarten im Linuxkernel}
+Der Linux-Kernel enthält standardmäßig einen sogenannten TUN/TAP Treiber. Dieser TUN/TAP Treiber erlaubt es \dq User Space\dq \ Programmen Zugriff auf rohe Netzwerkübertragungen zu nehmen. Dies ist der Fall, da es einem ermöglicht wird, virtuelle TUN/TAP Netzwerkadapter zu erstellen.
+Virtuell bedeutet in diesem Fall, dass die erzeugten Netzwerkadapter nicht, wie gewöhnlich, physische Hardwaregeräte im Rechner sind, sondern nur virtuell im Kernel existieren. Sie besitzen somit keine physische Komponente. Abseits davon gibt es aber keinen Unterschied zu einem physischen Adapter, es können wie gewohnt IP-Adressen, Subnetz etc konfiguriert werden.
+\\\\
+Dies bedeutet, dass Übertragungen, die den virtuellen Adapter betreten, nicht wie gewöhnlich als Bits und Bytes über ein Kabel, Funk oder ähnlichem übertragen werden, sondern stattdessen die Daten einer Anwendung als Bytestream zur Verfügung gestellt werden. Die Anwendung bekommt dabei einen "File descriptor" von diesem "File descriptor" kann die Anwendung sowohl lesen als auch schreiben. Es gilt dabei jedoch zu beachten, dass nicht beliebige Datatenstrukturen in den Adapter geschrieben werden können, es muss sich entsprechend formatierte Pakete oder Frames handeln. Für das Betriebsystem selbst sieht es so, aus als würde der Adapter wie gewöhnlich per Funk oder Kabel seine Daten lesen/schreiben.
+\\\\
+Es gibt bei TUN/TAP zwei grundlegend unterschiedliche Modi. Der Unterschied besteht darin, was am Ende von dem Adapter gelesen beziehungsweise geschrieben werden kann. Es gibt den TUN Modus und den TAP Modus. Mit welchem dieser beiden Modi der Netzwerkadapter am Ende arbeitet, wird mittels eines Flags beim Erstellen des Adapters festgelegt.
+\\
+\begin{description}
+    \item[TAP - Netzwerk-Wasserhahn] TAP steht im Englischen für Wasserhahn und so ähnlich arbeitet auch ein TAP Gerät.
+    Ein virtueller Netzwerkadapter, der auf TAP konfiguriert ist, agiert auf OSI Schicht 2. 
+    Beim Lesen aus dem virtuellen Adapter werden nur vollständige Ethernet-Frames entnommen und beim Schreiben werden entsprechend auch nur vollständige Ethernet-Frames akzeptiert.
+    \\
+    \item[TUN - Netzwerk-Tunnel] TUN steht nicht wie TAP für einen Englischen Begriff sondern ist nur eine Abkürzung für Netzwerktunnel. 
+    Ist ein virtueller Netzwerkadapter auf TUN konfiguriert, arbeitet er im Gegensatz zu TAP nicht auf Schicht 2, sondern auf Schicht 3. Das bedeutet, dass er beim Lesen nur vollständige IP-Pakete anbietet, aber auch nicht mehr. Während er beim Schreiben auch nur vollständige IP-Pakete akzeptiert. 
+\end{description}
+\
+
+\subsubsection{Lebensdauer eines TUN/TAP Geräts}
+Das TUN/TAP Gerät kann für 2 verschiedene Arten von Lebensdauer erstellt werden. Dabei gibt es eine Kurzlebige variante und eine langlebige. Die kurzlebige Variante heißt "transient\dq , die langlebige "persistent".
+\\
+\begin{description}
+    \item[Transient] Ein Netzwerkadapter der "transient\dq \ ist wird von demselben Prozess erstellt und auch gelöscht. Spätestens wenn sich der besitzende Prozess beendet, wird auch der virtuelle Adapter zerstört.
+    \item[Persistent] Ein virtueller Adapter, der "persistent\dq \ genannt wird ist also langlebig und existiert auch nach beenden des erstellenden Prozesses weiter. Andere Prozesse können sich dann später mit dem Adapter verbinden und ihn verwenden. Damit der virtuelle Netzwerkadapter verschwindet, muss er explizit nonpersistent gemacht werden.
+\end{description}
+
+\subsubsection{Erstellen und verwalten eines TUN/TAP Geräts}
+Um ein virtuelles TUN/TAP Gerät zu erstellen, ist es notwendig, die entsprechenden Rechte zu besitzen. Traditionelle UNIX Implementierungen unterscheiden grundsätzlich zwischen zwei Arten von Prozessen -  Privilegierte Prozesse und unprivilegierte Prozesse. Die effektive UID eines privilegierten Prozesses ist immer 0. Das bedeutet, dass er mit root Rechten gestartet wurde. Privilegierte Prozesse umgehen alle Berechtigungsüberprüfungen des Betriebsystems. 
+\\\\
+Seit Linuxkernel 2.2 wurden die Berechtigungen, die sonst nur einem privilegiertem Prozess zur Verfügung stehen weiter in einzelne Berechtigungen verfeinert. Die einzelnen Berechtigungen haben den Namen "Capabilities\dq \ und können auf einer per Thread Basis vergeben werden.
+\\\\
+Insgesamt gibt es 42 dieser Capabilities, aber für das Erstellen eines virtuellen Netzwerkadapters wird nur eine davon benötigt, nämlich \textbf{CAP\_NET\_ADMIN}. Diese Fähigkeit (Capability) erlaubt es einem Thread, neben dem Erstellen eines virtuellen Adapters auch noch:
+\\
+\begin{enumerate}
+    \item Netzwerkadapter zu konfigurieren
+    \item Die Administration einer IP Firewall
+    \item Die Routing Tabelle zu bearbeiten
+    \item Sich an jede IP-Adresse zu binden
+    \item Den TOS (Type of Service) zu setzen 
+    \item Treiber Statistiken zu bereinigen
+    \item Einen Adapter in den \dq promiscuous mode\dq \ zu setzen
+    \item Multicasting zu aktivieren
+    \item Einige Socketoptionen zu setzen
+\end{enumerate} 
+% https://man7.org/linux/man-pages/man7/capabilities.7.html 
+% https://backreference.org/2010/03/26/tuntap-interface-tutorial/
+\ \\
+Um nun tatsächlich ein TUN/TAP Gerät zu erstellen, muss zuerst auf das sogenante \textbf{clone device} zugreifen. Dieses befindet sich standardmäßig unter \textbf{/dev/net/tun}.
+\\\\
+Dafür word zuerst mit dem \textbf{open(\dq/dev/net/\dq, O\_RDWR);} Systemaufruf einen Dateideskriptor geholt. Jetzt kann mittels \textbf{ioctl(fd, TUNSETIFF, (void *) \&ifr);} Systemaufruf einen neuen Adapter erstellt werden.
+\\\\
+Der ioctl() Systemaufruf erlaubt es, IO Geräte zu steuern. Dies geschieht, indem die zugrundeliegenden Geräteparameter manipuliert werden. Übergeben werden in diesem speziellen Fall zuerst der Dateideskriptor, dann die Konstante TUNSETIFF und zu guter Letzt ein Zeiger zu einem ifreq struct, das folgendermaßen aufgebaut ist:
+
+\begin{program}[H]
+    \begin{CppCode}
+        struct ifreq {
+            char ifr_name[IFNAMSIZ]; /* Interface name */
+            union {
+                struct sockaddr ifr_addr;
+                struct sockaddr ifr_dstaddr;
+                struct sockaddr ifr_broadaddr;
+                struct sockaddr ifr_netmask;
+                struct sockaddr ifr_hwaddr;
+                short           ifr_flags;
+                int             ifr_ifindex;
+                int             ifr_metric;
+                int             ifr_mtu;
+                struct ifmap    ifr_map;
+                char            ifr_slave[IFNAMSIZ];
+                char            ifr_newname[IFNAMSIZ];
+                char           *ifr_data;
+            };
+        };
+    \end{CppCode}
+\end{program}
+\noindent
+% https://man7.org/linux/man-pages/man7/netdevice.7.html https://man7.org/linux/man-pages/man2/ioctl.2.html
+Die einzigen Felder, die beim Erstellen relevant sind, sind ifr\_flags und ifr\_name. Bei ifr\_name handelt es sich um den Namen des Netzwerkadapters, der auch später bei ifconfig angezeigt wird. Wird kein Name angegeben, wird ein generischer Name wie tun0 oder tap20 gewählt, während ifr\_flags definiert, ob es sich um ein TUN oder ein TAP Gerät handelt. Da es bei unserem Multi-Wan Proxy Server keinen Grund gibt, Schicht 2 Protokolle wie ARP etc. zu unterstützen, wird kein TAP Gerät verwendet, sondern ein TUN Gerät, das nur IP-Pakete überträgt. 
+\\\\ 
+Wird der ioctl() Systemaufruf erfolgreich abgeschlossen, dann wurde der virtuelle Netzwerkadapter erstellt und der Dateideskriptor, der zuvor erhalten wurde, kann nun verwendet werden, um damit zu kommunizieren. Hier der vollständiger Beispielcode zum Anlegen eines virtuellen Adapters:
+\begin{program}[H]
+    \begin{CppCode}
+        #include <linux /if.h>
+        #include <linux /if_tun.h>
+        
+        int tun_alloc(char *dev, int flags) {
+          struct ifreq ifr;
+          int fd;
+          int error_code;
+          char *clone_dev = "/dev/net/tun";
+        
+           /* Holen des Dateideskriptor vom clone device */
+           if( (fd = open(clone_dev, O_RDWR)) < 0 ) {
+             return fd;
+           }
+        
+           /* Löscht alles an Inhalt aus dem struct */
+           memset(&ifr, 0, sizeof(ifr));
+        
+           /* Das flag ist entweder IFF_TUN oder IFF_TAP
+            * wobei auch noch IFF_NO_PI dazu geodert 
+            * werden kann um Paket Informatioenn zu 
+            * unterdrücken.
+            */
+           ifr.ifr_flags = flags;   
+        
+           /* Kopieren des Namen in das struct Fals angegeben */
+           if (*dev) {
+             strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+           }
+        
+           /* Hier wird dann versucht den Adapter zu erstellen */
+           if( (error_code = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ) {
+             close(fd);
+             return error_code;
+           }
+        
+          /* Nachdem das Gerät erstellt wurde wird nun
+           * der Name aus dem struct kopiert. Dies ist 
+           * notwendig für die Situation in der kein Name
+           * angegeben wurde. Desswegen muss auch immer 
+           * ein Speicherbereich für den dev Zeiger 
+           * übergeben werden.
+           */
+          strcpy(dev, ifr.ifr_name);
+        
+          /* Am Ende geben wir nur mehr den Dateideskriptor zurück 
+           * den wir von nun an für alle weitere Kommunikation
+           * mit dem Adapter verwenden.
+           */
+          return fd;
+        }
+    \end{CppCode}
+\end{program}
+\noindent
+Der Adapter ist jetzt aber noch nicht persistent, sonder erstmal nur transient. Um dies zu ändern, erfordert es einige weitere ioctl() Aufrufe.  Der Adapter könnte allerdings in diesen Zustand aber schon ohne Probleme verwenden.
+\\\\
+Um das Netzwerkinterface jetzt auch noch persistent zu machen, werden im Normalfall zwei ioctl() Systemaufrufe gemacht. Mit dem ersten Aufruf wird das Netzwerkgerät persistent. Jedoch reicht das oft nicht. Der Code zum erstellen und zum einhängen in einen bereits vorhandenen Netzwerkadapter ist identisch, das bedeutet aber auch, dass die Berechtigungen identisch sein müssen. Der Multi-Wan Bonding Proxy Server soll nicht immer mit root Berechtigungen laufen, da dies ein mögliches Sicherheitsrisiko darstellt. Ein Angreifer der das Programm mit inkludierter root Berechtigung übernimmt, hätte somit vollständige Systemrechte. Die Äderung des Besitzers und der Persistenz muss noch mit root Rechten erfolgen.
+\\\\
+Hier kommt uns der zweite ioctl() Aufruf zur Hilfe. Dieser erlaubt es, den Besitzer des virtuellen Netzwerkadapters zu einem nicht root Nutzer zu ändern, wordurch es diesem möglich wird, Zugriff zu nehmen. Zum Löschen des Netzwerkadapters reicht es aus, den Adapter wieder transient zu machen und den Prozess zu beenden. Hier der Beispielcode zur Persistentmachung eines virtuellen Netzwerkadapters:
+\begin{program}[H]
+    \begin{CppCode}
+        if(ioctl(tap_fd, TUNSETPERSIST, 1) < 0){
+            perror("enabeling TUNSETPERSIST");
+            exit(1);
+        }
+        
+        int owner{1002}; // UID des neuen Besitzers
+        if(ioctl(tap_fd, TUNSETOWNER, owner) < 0){
+            perror("TUNSETOWNER");
+            exit(1);
+        }
+
+        // Loeschen eines virtuellen Netzwerkadapters
+        if(ioctl(tap_fd, TUNSETPERSIST, 0) < 0){
+            perror("disabling TUNSETPERSIST");
+        }
+        exit(0);
+    \end{CppCode}
+\end{program}
+\noindent
+Ein Prozess, der mit der effektiven UID des Adapterbesitzers läuft, kann nun mit dem selben Code, mit dem ein virtueller Netzwerkadapter erstellt wird, diesen einhängen. Dabei ist zu beachten, dass dazu versucht werden muss, einen Netzwerkadapter mit genau demselben Namen zu erstellen, wie der, für den wir Rechte bekommen haben. Generell sollte versucht werden, einen weiteren Adapter mit demselben Namen zu erstellen, wie der bereits existierende. Dieser wird nur eingehangen, sofern ausreichende Berechtigung (root, CAP\_NET\_ADMIN) vorhanden sind. 
+
+\newpage
+\subsubsection{Lesen und schreiben von einem TUN/TAP Gerät}
+Zum Lesen und Schreiben von praktisch allen Geräten und Datein wird einfach der read() oder der write() Systemaufruf verwendet. 
+\\
+\begin{description}
+    \item[read() - Systemaufruf] Bei read() werden drei Parameter übergeben. Zuerst der Dateideskriptor, von dem gelesen werden soll, dann ein Zeiger auf einen Char Array Buffer und zu guter Letzt die Anzahl der zu lesenden Bytes. read() blockiert bis die gewünschte Anzahl an Bytes in den Buffer gelesen, das Dateiende erreicht oder ein Fehler gefunden wurde. Ist read() erfolgreich, wird die Anzahl an gelesenen Bytes zurückgegeben, im Fehlerfall ein Fehlercode kleiner 0.
+    \\% https://man7.org/linux/man-pages/man2/read.2.html
+    \item[write() - Systemaufruf] Es werden dabei, wie auch bei read(), der Dateideskriptor, Char Array Zeiger und dessen größe übergeben. write() blockiert solange bis, die Anzahl an Bytes dieser größe aus dem Char Array gelesen und in die Datei geschrieben oder ein Größenlimit der Datei erreicht wurde. Sollte es zu einem Fehler kommen, wird auch hier eine Zahl kleiner 0 zurückgegeben, sonst wird die Anzahl der geschriebenen Bytes.
+    % https://man7.org/linux/man-pages/man2/write.2.html
+\end{description}
+\ \\
+Da wir vermeiden möchten, Datenpakete zu halbieren oder zumindest nicht vollständig zu lesen und zu schreiben, müssen wir rücksicht auf die Maximum Transmission Unit (MTU) des virtuellen Netzwerkadapters nehmen. Die MTU beschreibt das Maximum der größtmöglichen Protokolldateneinheit und steht in Verbindung zu der maximalen Framegröße, die auf OSI Schicht 2 übertragen werden kann. Bei Ethernet beträgt die MTU 1500 Bytes vorrausgesetzt Jumboframes sind nicht aktiviert, was bei unserem virtuellen Adapter nicht der Fall ist.
+\\\\
+Wir schreiben und lesen von unserem virtuellen Netzwerkadapter also immer maximal 1500 Bytes. So können wir sicher gehen, dass wir immer vollständige Datenpakete entgegennehmen und schreiben.
+\\\\
+Physisch ist das nachfolgende Beispiel so vorstellbar, als hätte ein Rechner zwei Ethernet Netzwerkadapter und beide wären mit einem Patchkabel miteinander verbunden. Es ist zwar nicht besonders sinnvoll dies zu tun, aber es kann so gut geziegt werden, wie Schreiben und Lesen von einem virtuellen Adapter funktioniert. Im Beispiel wird auch ein select() Systemaufruf verwendet, um zu überprüfen, ob in einem der beiden virtuellen Netzwerkadapter gerade Datenpakete verfügbar sind. Nur dann wird versucht zu lesen.
+\newpage 
+\begin{program}[H]
+    \begin{CppCode}
+        char tun_name1[IFNAMSIZ];
+        char tun_name2[IFNAMSIZ];
+        char* buffer = new char[1500]; /* MTU größe */
+        int tun_fd1, tun_fd2;
+  
+        /* Erstellen oder einhängen des TUN Adapters */
+        strcpy(tun_name1, "tun1");
+        tun_fd1 = tun_alloc(tun_name1, IFF_TUN | IFF_NO_PI);
+
+        /* Erstellen oder einhängen des zweiten TUN Adapters */
+        strcpy(tun_name2, "tun2");
+        tun_fd2 = tun_alloc(tun_name2, IFF_TUN | IFF_NO_PI);
+      
+        if(tun_fd1 < 0 || tun_fd2 < 0){
+          perror("Fehler beim erstellen/einhängen.");
+          exit(1);
+        }
+      
+        /* Daten lesen und schreiben. */
+        uint16_t nread, nwrite;
+        int maxfd = (tun_fd1 > tun_fd12) ? tun_fd1 : tun_fd2;
+        while(1) {
+            int ret;
+            fd_set rd_set;
+        
+            FD_ZERO(&rd_set);
+            FD_SET(tun_fd1, &rd_set); FD_SET(tun_fd2, &rd_set);
+
+            /* Warten auf änderungen bei einem der beiden Dateideskriptoren */
+            ret = select(maxfd + 1, &rd_set, nullptr, nullptr, nullptr);
+        
+            if (ret < 0 && errno == EINTR) {
+              continue;
+            }
+        
+            if (ret < 0) {
+              perror("select()");
+              exit(1);
+            }
+
+            // Lesen von tun1 und schreiben in tun2 wenn Inhalt in tun1
+            if(FD_ISSET(tun_fd1, &rd_set)) {
+                nread = read(tun_fd1, buffer, sizeof(buffer));
+                if(nread < 0) {
+                    perror("Lesen vom Interface");
+                    close(tun_fd1); close(tun_fd2);
+                    exit(1);
+                }
+                printf("Gelesen %d bytes von Gerät %s\n", nread, tun_name1);
+
+                nwrite = write(tun_fd2, buffer, nread);
+                if(nwrite < 0) {
+                    perror("Schreiben zum Interface");
+                    close(tun_fd1); close(tun_fd2);
+                    exit(1);
+                }
+                printf("Geschrieben %d bytes in Gerät %s\n", nwrite, tun_name2);
+            }
+    \end{CppCode}
+\end{program}
+\noindent
+\begin{program}[H]
+    \begin{CppCode}
+        // Lesen von tun2 und schreiben in tun1 wenn Inhalt in tun2
+        if(FD_ISSET(tun_fd2, &rd_set)) {
+            nread = read(tun_fd2, buffer, sizeof(buffer));
+            if(nread < 0) {
+                perror("Lesen vom Interface");
+                close(tun_fd1); close(tun_fd2);
+                exit(1);
+            }
+            printf("Gelesen %d bytes von Gerät %s\n", nread, tun_name2);
+
+            nwrite = write(tun_fd1, buffer, nread);
+            if(nwrite < 0) {
+                perror("Schreiben zum Interface");
+                close(tun_fd1); close(tun_fd2);
+                exit(1);
+            }
+            printf("Geschrieben %d bytes in Gerät %s\n", nwrite, tun_name1);
+        }
+    }
+    \end{CppCode}
+\end{program}
+\noindent
+\subsection{Kommunikation mit unserem Multi-Wan Bonding Windows-Treiber}
+Zur Kommunikation, zwischen dem Proxy Server und dem Windows Treiber verwenden wir die normale Linux Socket API. Wir setzen hier auf UDP Datagrams. Wie wir schon im vorherigen Abschnitt über den TUN/TAP Treiber lernen konnten, sind die größten IP-Pakete, mit denen wir rechnen müssen, 1500 Bytes groß. Bei der Kommunikation zwischen Server und Windows Treiber machen wir nun nichts anderes, als ein UDP Datagram zu verschicken, das als Nutzdaten das IP-Paket enthält, das wir von dem TUN Interface bekommen haben. Genauso läuft es auch in die andere Richtung. 
+\\\\
+Wird ein UDP Datagram von unserem Server empfangen, werden einfach die Nutzdaten genommen und mit einem write() Systemaufruf an das TUN Interface übergeben. Dabei ist uns egal, woher dieses UDP Datagram ursprünglich kommt. Es werden einfach alle eingehenden Datagrams auf Port 5555 genommen und deren Nutzdaten an den virtuellen Netzwerkadapter übergeben ohne weitere Verarbeitungsschritte. 
+\\\\
+Der Port und die IP-Adresse des Absenders des Datagrams wird in einem Set zwischengespeichert. Wird nun mit einem read() Systemaufruf ein IP-Paket aus dem TUN Interface gelesen, wird einfach zufällig ein Endpunkt(IP-Adresse und Port) aus dem Set ausgewählt und das IP-Paket mittels sendto() Systemaufruf als UDP Datagram an den Windows Treiber gesendet. Hier gibt es vermutlich noch einigen Freiraum an Verbesserung. So könnten wir beispielsweise nicht allen Verbindungen zum Server dieselbe Wahrscheinlichkeit für eine Antwort geben, sondern, anhand von Bandbreite oder Ping Zeit, unterschiedliche Wahrscheinlichkeiten vergeben. Auch könnten zusammengehörige Pakete beisammengehalten werden, um TCP Reihenfolgefehler zu vermeiden.
+\newpage
+Um unter C/C++ auf einem UDP Port zu lauschen, müssen wir zuerst wieder einen Dateideskriptor erstellen. Dies erfolgt im Fall von Sockets mittels des socket() Systemaufrufs. Dieser erstellt uns einen Endpunkt zur Kommunikation und gibt uns einen Dateideskriptor, der auf diesen Zeigt. socket() erwartet drei Parameter:
+\\\\
+Prototyp: int socket(int domain, int type, int protocol);
+\begin{enumerate}
+    \item \textbf{int domain}: Gibt an, um welche Kommunikationsdomaine es sich handelt. Dies kann beispielsweise IPv4, IPv6 aber auch genau so gut Bluetooth sein. In unserem Fall wird es sich um IPv4 handeln.
+    \item \textbf{int type}: Beschreibt die Semantik der Kommunikation. Je nachdem was wir hier angeben, können wir mittels Stream, Datagram, Paket oder SEQPaket kommunizieren.
+    \item \textbf{int protocol}: Hier wird das Kommunikationsprotokoll angegeben - Entweder TCP, UDP oder weitere andere, je nachdem, welche domain oder type verwendet wird. In unserem Fall verwenden wir UDP.
+    \item \textbf{Rückgabe}: Zurückgegeben wird uns der Dateideskriptor des Sockets.
+\end{enumerate} 
+\ \\%https://man7.org/linux/man-pages/man2/socket.2.html
+Nachdem wir unseren Dateideskriptor erhalten haben, hat der Socket aber noch keine IP-Adresse oder ähnliches. Mittels bind() Systemaufruf können wir nun dem Socket eine IP-Adresse zuweisen. Diese Operation wird traditionel als Namensgebung des Sockets bezeichnet. bind() erwartet 3 Parameter.
+\\\\
+Prototyp: int bind(int sockfd, const struct sockaddr *addr, socklen\_t addrlen);
+\begin{enumerate}
+    \item \textbf{int sockfd}: Der Dateideskriptor des Sockets.
+    \item \textbf{const struct sockaddr *addr}: Hier wird die eigentliche Adresse übergeben und bestimmt, um welche Adressenfamilie. 
+    \item \textbf{socklen\_t addrlen}: Hier wird die Länge der Adresse übergeben, die unter anderem von der Adressenfamilie abhängt.
+    \item \textbf{Rückgabe}: 0 wenn erfolgreich gesetzt. -1 im Fehlerfall.
+\end{enumerate} 
+\ \\%https://man7.org/linux/man-pages/man2/bind.2.html
+Unser socket ist damit fertig. Alles, was wir jetzt noch machen müssen, ist mittels recvfrom() Daten aus dem Socket zu lesen. Im Falle unserer Serverimplementierung wird davor aber noch mit einem select() Systemaufruf überprüft, ob es Daten zu lesen gibt. Für gewöhnlich wird ein recv() Systemaufruf verwendet. Dies ist hier aber ausnahmsweise nicht der Fall, da wir keine Verbindung zu einem fixen entfernten Endpunkt haben, sondern von vielen verschiedenen Endpunkten Daten empfangen können.
+\\\\
+Prototyp: ssize\_t recvfrom(int sockfd, void *buf, size\_t len, int flags, struct sockaddr *src\_addr, socklen\_t *addrlen);
+\begin{enumerate}
+    \item \textbf{int sockfd}: Der Dateideskriptor des Sockets.
+    \item \textbf{void *buf}: Ein Zeiger auf das Char Array, das die empfangenen Daten nachher beinhalten soll. 
+    \item \textbf{size\_t len}: Gibt die Größe des Buffers an, in den wir lesen möchten.
+    \item \textbf{int flags}: Damit lassen sich Eigenschaften von recvfrom() ändern - beispielsweise, ob es ein blockierender Aufruf ist oder nicht.
+    \item \textbf{struct sockaddr *src\_addr}: Hier übergeben wir einen Zeiger zu einem socketaddr struct, in das recvfrom() beim Empfangen die Absenderadresse schreibt.
+    \item \textbf{ssocklen\_t *addrlen}: Ein Zeiger auf die Länge der Adresse. Der Inhalt wird entsprechend der Absenderadresse geändert.
+    \item \textbf{Rückgabe}: 0 wenn Verbindung ordnungsgemäß getrennt. Anzahl der Bytes wenn welche empfangen wurden. -1 im Fehlerfall.
+\end{enumerate} 
+\ \\%https://linux.die.net/man/2/recvfrom
+Neben dem Empfangen muss aber auch noch die Möglichkeit bestehen Datagrams zu senden. Hierfür gibt es den Systemaufruf sendto(). Mittels sendto() kann ein übergebener Buffer an eine bestimmte Zieladresse gesendet werden.
+\\\\
+Prototyp: ssize\_t sendto(int sockfd, const void *buf, size\_t len, int flags, const struct sockaddr *dest\_addr, socklen\_t addrlen);
+\begin{enumerate}
+    \item \textbf{int sockfd}: Der Dateideskriptor des Sockets.
+    \item \textbf{const void *buf}: Ein Zeiger auf das Char Array, das die zu sendenden Daten beinhaltet. 
+    \item \textbf{size\_t len}: Gibt die Größe des Buffers an, von den wir schreiben möchten.
+    \item \textbf{int flags}: Damit lassen sich Eigenschaften von sendto() ändern - beispielsweise, ob es ein blockierender Aufruf ist oder nicht.
+    \item \textbf{const struct sockaddr *dest\_addr}: Hier übergeben wir einen Zeiger zu einem socketaddr struct, das die Adresse angibt an jene sendto() das Datagram übermitteln soll.
+    \item \textbf{ssocklen\_t *addrlen}: Die Länge in Bytes der Adresse.
+    \item \textbf{Rückgabe}: Anzahl der Bytes wenn welche gesendet wurden. -1 im Fehlerfall.
+\end{enumerate} 
+\ \\%https://linux.die.net/man/2/sendto
+\newpage
+\subsubsection{UDP-Socket Server Beispielcode}
+Der nachfolgende Codeblock zeigt wie auf einem UDP Port gelauscht werden kann und wie es möglich ist Daten zu empfangen/versenden.
+\begin{program}[H]
+    \begin{CppCode}
+        int main() {
+            int sockfd;
+            char buffer[MAXLINE];
+            char *hello = "Hello from server";
+            struct sockaddr_in servaddr, cliaddr;
+            
+            /* Erzeugen des Socket Dateideskriptor */
+            if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+                perror("socket creation failed");
+                exit(EXIT_FAILURE);
+            }
+
+            /* Leeren der Adressen. */
+            memset(&servaddr, 0, sizeof(servaddr));
+            memset(&cliaddr, 0, sizeof(cliaddr));
+
+            // Setzen der Adresse, Port und Familie
+            servaddr.sin_family = AF_INET; // IPv4
+            servaddr.sin_addr.s_addr = INADDR_ANY;
+            servaddr.sin_port = htons(5555); 
+
+            /* Namensgebung des Sockets */
+            if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+                perror("bind failed");
+                exit(EXIT_FAILURE);
+            }
+            int len, n;
+            len = sizeof(cliaddr);
+            /* Empfängt und schreibt die Client Adresse */
+            n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
+            buffer[n] = '\0'; // Um es zu einem string zu machen.
+            printf("Client : %s\n", buffer);
+            /* Senden einer Antwort an den Server */
+            sendto(sockfd, (const char *)hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            printf("Hello message sent.\n");
+            return 0;
+        }
+    \end{CppCode}
+\end{program}
+\noindent
+\newpage
+\subsection{Anwendung von Network Address Translation (NAT)}
+Um die Datenpakete des Windows Treibers an das Internet zu senden ist NAT erforderlich. Die Datenpakete des Windows-Treibers besitzen, auch nach der Ankunft bei unserem Server, nur eine lokale IP-Adresse als Absender, es handelt es sich um die IP-Adresse des virtuellen Netzwerkadapters unter Windows. Um diese Adresse zu übersetzen verwenden wir aus Gründen der Einfachkeit keine eigene NAT Implementierung sondern greifen auf bereits vorhandene Lösungen zurück. 
+\\\\ 
+Im speziellen setzen wir hier auf eine relativ einfache Lösung mittels iptables.
+Iptables existieren seit Linuxkernel 2.4 mit ihnen lässt sich der IP-Paketfilter des Linuxkernels konfigurieren, aber auch die Minipulation von Datenpaketen ist möglich. Genau diese Manipulation verwenden wir um NAT zu betreiben. Tatsächlich wird iptables schon mit einer vollständigen Implementierung von NAT ausgeliefert.
+\\ % https://wiki.ubuntuusers.de/iptables2/
+\begin{center}
+    \textbf{iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE}
+\end{center}
+\ \\ 
+Mit diesem Befehl aktivieren wir NAT für den Host-Rechner. Bei dem Parameter -o handelt es sich um den Netzwerkadapter welcher eine Verbindung in das Internet besitzt. Im Grundlegendem sagt dieser Befehl nur das alle IP-Pakete die den Rechner über Netzwerkadapter eth1 verlassen möchten maskiert werden. Maskieren bedeutet in diesem Fall das er die Absenderadresse und Port gegen die Adresse des Netzwerkadapters und einen eigens gewählten Port ausgetauscht wird. Es wird dabei auch implizit eine entsprechende Umkehrregel erstellt. Einghende Datenpakete werden also im prerouting wieder auf lokale IP-Adressen umgeschrieben. % https://www.karlrupp.net/de/computer/nat_tutorial
+\\\\
+Dieses maskieren findet für alle Datenpakete statt, auch für jene die vom Host-Rechner selbst stammen. Jedoch wird generell versucht immer den bereitsvorhandenen Port beizubehalten wesshalb es nur nie bis selten zu änderungen an dem IP-Header kommen sollte.
+\\\\ 
+Da wir nun effektiv eine NAT-Wall haben ist es einem Windows Nutzer nicht mehr ohne weiteres möglich öffentlich zugängliche Server auf seinem Rechner zu betreiben. Hierzu müsste man eine Portweiterleitung einrichten. Portweiterleitungen kann man aber nur einrichten wenn man zugang zum Host-Rechner hat auf dem unser Multi-Wan Bonding Proxy Server läuft. Bedeutet zum Betrieb eines öffentlich erreichbaren Servers über NetShare ist es erforderlich eine Portweiterleitungs Regel beim NetShare Server hinzuzufügen. Diese könnte folgendermaßen aussehen:
+\\ 
+\begin{center}
+    \textbf{iptables -t nat -A PREROUTING -p tcp -i eth1 --dport 443 -j DNAT --to-destination 10.0.0.2:8443}
+\end{center}
+\ \\
+Dabei ist -i der Netzwerkadapter des Proxy Servers der mit dem Internet verbunden ist, --dport der Port den wir in das lokale Netzwerk weiterleiten möchten und --to-destination der Ziel Endpunkt im lokalen Netzwerk. In unserem Fall muss die Ziel IP-Adresse 10.0.0.2 sein da der virtuelle Netzwerkadapter des Windows Treibers standardmäßig diese IP-Adresse bekommt.
