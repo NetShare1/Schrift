@@ -27,10 +27,10 @@ Wir haben uns bei der Wahl des Server Betriebsystems für Linux/Debian 8 entschi
 \begin{enumerate}
     \item Der Linuxkernel besitzt bereits standardmäßig einen TUN/TAP Treiber, der die Entwicklung des Servers um einiges vereinfacht. Bei Windows müsste erst ein eigener Treiber geschreiben bzw. eine externe Bibliothek verwendet werden, um einen virtuellen Netzwerkadapter zu erstellen. Dies ist unter Linux nicht notwendig.\footnote[1]{\cite[Vgl.][]{SRV2}}
     \item Mittels iptables ist es nur ein minimaler Aufwand NAT auf einen Netzwerkadapter anzuwenden. 
-    \item Debian ist im Vergleich zu Windows um einiges "leichter". Damit sinken die Leistungsanforderungen an das Hostsystem erheblich. Debian benötigt beispielsweise keinen Desktop. Der Proxy Server selbst ist auch sehr leistungsschonend, weshalb hier schon ein älterer Raspberry PI ausreichen würde.\footnote[2]{\cite[Vgl.][]{SRV3}}
+    \item Debian verbraucht bei der Ausführung weniger Resourcen als Windows, wodurch diese für den Proxy Server zur Verfügung stehen. Damit sinken auch die Leistungsanforderungen an den Hostrechner erheblich.\footnote[2]{\cite[Vgl.][]{SRV21}}\footnote[3]{\cite[Vgl.][]{SRV22}} Debian benötigt beispielsweise keinen Desktop. Der Proxy Server selbst ist auch sehr leistungsschonend, weshalb hier schon ein älterer Raspberry PI ausreichen würde.\footnote[4]{\cite[Vgl.][]{SRV3}}
 \end{enumerate}
 \ \\
-Es gibt aber viele Linux Distributionen, die diese Funktionalitäten haben. Warum haben wir uns also speziell für Debian 8 entschieden? Die beliebtesten Serverbetriebsysteme sind aktuell Debian, Ubuntu, CentOS und Windows ohne spezielle Reihenfolge. Die Entscheidung fiel auf Debian, weil es sich nicht nur um eine der am weitesten verbreiteten Distributionen handelt, sondern auch, weil es viele andere Distributionen gibt, die auf Debian aufbauen. Ubuntu ist eine davon. Dies erlaubt unserem Server auf einer Vielzahl an Betriebsystemen ohne hohem Aufwand zu laufen. Wir sind uns aber ziemlich sicher, dass es auch unter anderen Linux Distributionen keine großen Probleme geben sollte, sofern der Source-Code extra für dieses kompiliert wird. \footnote[3]{\cite[Vgl.][]{SRV1}}
+Es gibt aber viele Linux Distributionen, die diese Funktionalitäten haben. Warum haben wir uns also speziell für Debian 8 entschieden? Die beliebtesten Serverbetriebsysteme sind aktuell Debian, Ubuntu, CentOS und Windows ohne spezielle Reihenfolge. Die Entscheidung fiel auf Debian, weil es sich nicht nur um eine der am weitesten verbreiteten Distributionen handelt, sondern auch, weil es viele andere Distributionen gibt, die auf Debian aufbauen. Ubuntu ist eine davon. Dies erlaubt unserem Server auf einer Vielzahl an Betriebsystemen ohne hohem Aufwand zu laufen. Wir sind uns aber ziemlich sicher, dass es auch unter anderen Linux Distributionen keine großen Probleme geben sollte, sofern der Source-Code extra für dieses kompiliert wird. \footnote[5]{\cite[Vgl.][]{SRV1}}
 
 \subsection{Hardware}
 Die Anforderungen an die Hardware sind minimal. Selbst ein schwaches Hostsystem kann unseren  Proxy Server ohne Probleme betreiben. 1GB Arbeitsspeicher ist mehr als ausreichend und mit 2GHz CPU Takt sollten bereits höhere Datenübertragungsraten ohne Probleme möglich sein. 
@@ -169,9 +169,11 @@ Um nun tatsächlich ein TUN/TAP Gerät zu erstellen, muss zuerst auf das sogenan
 \\\\
 Dafür word zuerst mit dem \textbf{open(\dq/dev/net/\dq, O\_RDWR);} Systemaufruf einen Dateideskriptor geholt. Jetzt kann mittels \textbf{ioctl(fd, TUNSETIFF, (void *) \&ifr);} Systemaufruf einen neuen Adapter erstellt werden.$^{1}$
 \\\\
-Der ioctl() Systemaufruf erlaubt es, IO Geräte zu steuern. Dies geschieht, indem die zugrundeliegenden Geräteparameter manipuliert werden. Übergeben werden in diesem speziellen Fall zuerst der Dateideskriptor, dann die Konstante TUNSETIFF und zu guter Letzt ein Zeiger zu einem ifreq struct, das folgendermaßen aufgebaut ist:\footnote[2]{\cite[Vgl.][]{SRV9}}
+Der ioctl() Systemaufruf erlaubt es, IO Geräte zu steuern. Dies geschieht, indem die zugrundeliegenden Geräteparameter manipuliert werden. Übergeben werden in diesem speziellen Fall zuerst der Dateideskriptor, dann die Konstante TUNSETIFF und zu guter Letzt ein Zeiger zu einem ifreq struct, das wie in Programm \ref{IDK1} aufgebaut ist.\footnote[2]{\cite[Vgl.][]{SRV9}}
 
 \begin{program}[H]
+    \caption{Aufbau ifreq struct}
+    \label{IDK1}
     \begin{CppCode}
 struct ifreq {
     char ifr_name[IFNAMSIZ]; /* Interface name */
@@ -197,9 +199,10 @@ struct ifreq {
 % https://man7.org/linux/man-pages/man7/netdevice.7.html https://man7.org/linux/man-pages/man2/ioctl.2.html
 Die einzigen Felder, die beim Erstellen relevant sind, sind ifr\_flags und ifr\_name.$^{1}$ Bei ifr\_name handelt es sich um den Namen des Netzwerkadapters, der auch später bei ifconfig angezeigt wird. Wird kein Name angegeben, wird ein generischer Name wie tun0 oder tap20 gewählt, während ifr\_flags definiert, ob es sich um ein TUN oder ein TAP Gerät handelt.$^{1}$ Da es bei unserem Multi-Wan Proxy Server keinen Grund gibt, Schicht 2 Protokolle wie ARP etc. zu unterstützen, wird kein TAP Gerät verwendet, sondern ein TUN Gerät, das nur IP-Pakete überträgt. 
 \\\\ 
-Wird der ioctl() Systemaufruf erfolgreich abgeschlossen, dann wurde der virtuelle Netzwerkadapter erstellt und der Dateideskriptor, der zuvor erhalten wurde, kann nun verwendet werden, um damit zu kommunizieren.$^{1}$ Hier der vollständiger Beispielcode zum Anlegen eines virtuellen Adapters:
+Wird der ioctl() Systemaufruf erfolgreich abgeschlossen, dann wurde der virtuelle Netzwerkadapter erstellt und der Dateideskriptor, der zuvor erhalten wurde, kann nun verwendet werden, um damit zu kommunizieren.$^{1}$ Hier der vollständiger Beispielcode (Programm \ref{IDK2}) zum Anlegen eines virtuellen Adapters:
 \begin{program}[H]
     \caption{Erstellen eines TUN/TAP Adapters}
+    \label{IDK2}
     \begin{CppCode}
 #include <linux /if.h>
 #include <linux /if_tun.h>
