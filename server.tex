@@ -24,7 +24,7 @@ Außerdem müssen gewisse Standards von Performance, Stabilität und Ressourcena
 Wir haben uns bei der Wahl des Server Betriebsystems für Linux/Debian 8 entschieden. Dafür gibt es einige Gründe:
 \\
 \begin{enumerate}
-    \item Der Linux Kernel besitzt bereits standardmäßig einen TUN/TAP Treiber, der die Entwicklung des Servers um einiges vereinfacht. Bei Windows müsste erst ein eigener Treiber geschreiben bzw. eine externe Bibliothek verwendet werden, um einen virtuellen Netzwerkadapter zu erstellen. Dies ist unter Linux nicht notwendig.
+    \item Der Linuxkernel besitzt bereits standardmäßig einen TUN/TAP Treiber, der die Entwicklung des Servers um einiges vereinfacht. Bei Windows müsste erst ein eigener Treiber geschreiben bzw. eine externe Bibliothek verwendet werden, um einen virtuellen Netzwerkadapter zu erstellen. Dies ist unter Linux nicht notwendig.
     \item Mittels iptables ist es nur ein minimaler Aufwand NAT auf einen Netzwerkadapter anzuwenden. 
     \item Debian ist im Vergleich zu Windows um einiges "leichter". Damit sinken die Leistungsanforderungen an das Hostsystem erheblich. Debian benötigt beispielsweise keinen Desktop. Der Proxy Server selbst ist auch sehr leistungsschonend, weshalb hier schon ein älterer Raspberry PI ausreichen würde.
 \end{enumerate}
@@ -112,7 +112,7 @@ Anwendungen greifen für gewöhnlich auf entsprechende Systemaufrufe zurück, um
 Natürlich wäre es für uns auch möglich gewesen, eine eigene API ohne virtuellen Netzwerkadapter zu erstellen. Dies würde jedoch dazu führen, das NetShare nur von jenen Applikationen verwendet werden könnte, die unsere API implementieren. Um nun von allen Arten von Applikationen Datenpakete zu erhalten, ist es also notwendig, dieselben Netzwerkschnittstellen zu verwenden, wie es auch eben jene Applikationen tun.  
 \\\\
 Zwar müssen wir nur bei unserem Windows Treiber auf Fremdanwendungen achten, aber auch bei unserem Proxy Server bringt uns dieses Vorgehen einige Vorteile. Wir müssten beispielsweise NAT selbst implementieren. Da wir jedoch einen virtuellen Netzwerkadapter auf der Seite des Servers verwenden, können wir von bereits vorhandenen Implementierungen NATs Gebrauch machen. Weiters eröffnet uns dies die Möglichkeit, den Server einfach mit bereits vorhandener Netzwerksoftware zu erweitern, wie beispielsweise um eine Firewall.
-\subsection{Treiber für virtuelle Netzwerkkarten im Linux Kernel}
+\subsection{Treiber für virtuelle Netzwerkkarten im Linuxkernel}
 Der Linux-Kernel enthält standardmäßig einen sogenannten TUN/TAP Treiber. Dieser TUN/TAP Treiber erlaubt es \dq User Space\dq \ Programmen Zugriff auf rohe Netzwerkübertragungen zu nehmen. Dies ist der Fall, da es einem ermöglicht wird, virtuelle TUN/TAP Netzwerkadapter zu erstellen.
 Virtuell bedeutet in diesem Fall, dass die erzeugten Netzwerkadapter nicht, wie gewöhnlich, physische Hardwaregeräte im Rechner sind, sondern nur virtuell im Kernel existieren. Sie besitzen somit keine physische Komponente. Abseits davon gibt es aber keinen Unterschied zu einem physischen Adapter, es können wie gewohnt IP-Adressen, Subnetz etc konfiguriert werden.
 \\\\
@@ -141,7 +141,7 @@ Das TUN/TAP Gerät kann für 2 verschiedene Arten von Lebensdauer erstellt werde
 \subsubsection{Erstellen und verwalten eines TUN/TAP Geräts}
 Um ein virtuelles TUN/TAP Gerät zu erstellen, ist es notwendig, die entsprechenden Rechte zu besitzen. Traditionelle UNIX Implementierungen unterscheiden grundsätzlich zwischen zwei Arten von Prozessen -  Privilegierte Prozesse und unprivilegierte Prozesse. Die effektive UID eines privilegierten Prozesses ist immer 0. Das bedeutet, dass er mit root Rechten gestartet wurde. Privilegierte Prozesse umgehen alle Berechtigungsüberprüfungen des Betriebsystems. 
 \\\\
-Seit Linux Kernel 2.2 wurden die Berechtigungen, die sonst nur einem privilegiertem Prozess zur Verfügung stehen weiter in einzelne Berechtigungen verfeinert. Die einzelnen Berechtigungen haben den Namen "Capabilities\dq \ und können auf einer per Thread Basis vergeben werden.
+Seit Linuxkernel 2.2 wurden die Berechtigungen, die sonst nur einem privilegiertem Prozess zur Verfügung stehen weiter in einzelne Berechtigungen verfeinert. Die einzelnen Berechtigungen haben den Namen "Capabilities\dq \ und können auf einer per Thread Basis vergeben werden.
 \\\\
 Insgesamt gibt es 42 dieser Capabilities, aber für das Erstellen eines virtuellen Netzwerkadapters wird nur eine davon benötigt, nämlich \textbf{CAP\_NET\_ADMIN}. Diese Fähigkeit (Capability) erlaubt es einem Thread, neben dem Erstellen eines virtuellen Adapters auch noch:
 \\
@@ -417,3 +417,83 @@ Prototyp: ssize\_t recvfrom(int sockfd, void *buf, size\_t len, int flags, struc
     \item \textbf{Rückgabe}: 0 wenn Verbindung ordnungsgemäß getrennt. Anzahl der Bytes wenn welche empfangen wurden. -1 im Fehlerfall.
 \end{enumerate} 
 \ \\%https://linux.die.net/man/2/recvfrom
+Neben dem Empfangen muss aber auch noch die Möglichkeit bestehen Datagrams zu senden. Hierfür gibt es den Systemaufruf sendto(). Mittels sendto() kann ein übergebener Buffer an eine bestimmte Zieladresse gesendet werden.
+\\\\
+Prototyp: ssize\_t sendto(int sockfd, const void *buf, size\_t len, int flags, const struct sockaddr *dest\_addr, socklen\_t addrlen);
+\begin{enumerate}
+    \item \textbf{int sockfd}: Der Dateideskriptor des Sockets.
+    \item \textbf{const void *buf}: Ein Zeiger auf das Char Array, das die zu sendenden Daten beinhaltet. 
+    \item \textbf{size\_t len}: Gibt die Größe des Buffers an, von den wir schreiben möchten.
+    \item \textbf{int flags}: Damit lassen sich Eigenschaften von sendto() ändern - beispielsweise, ob es ein blockierender Aufruf ist oder nicht.
+    \item \textbf{const struct sockaddr *dest\_addr}: Hier übergeben wir einen Zeiger zu einem socketaddr struct, das die Adresse angibt an jene sendto() das Datagram übermitteln soll.
+    \item \textbf{ssocklen\_t *addrlen}: Die Länge in Bytes der Adresse.
+    \item \textbf{Rückgabe}: Anzahl der Bytes wenn welche gesendet wurden. -1 im Fehlerfall.
+\end{enumerate} 
+\ \\%https://linux.die.net/man/2/sendto
+\newpage
+\subsubsection{UDP-Socket Server Beispielcode}
+Der nachfolgende Codeblock zeigt wie auf einem UDP Port gelauscht werden kann und wie es möglich ist Daten zu empfangen/versenden.
+\begin{program}[H]
+    \begin{CppCode}
+        int main() {
+            int sockfd;
+            char buffer[MAXLINE];
+            char *hello = "Hello from server";
+            struct sockaddr_in servaddr, cliaddr;
+            
+            /* Erzeugen des Socket Dateideskriptor */
+            if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+                perror("socket creation failed");
+                exit(EXIT_FAILURE);
+            }
+
+            /* Leeren der Adressen. */
+            memset(&servaddr, 0, sizeof(servaddr));
+            memset(&cliaddr, 0, sizeof(cliaddr));
+
+            // Setzen der Adresse, Port und Familie
+            servaddr.sin_family = AF_INET; // IPv4
+            servaddr.sin_addr.s_addr = INADDR_ANY;
+            servaddr.sin_port = htons(5555); 
+
+            /* Namensgebung des Sockets */
+            if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+                perror("bind failed");
+                exit(EXIT_FAILURE);
+            }
+            int len, n;
+            len = sizeof(cliaddr);
+            /* Empfängt und schreibt die Client Adresse */
+            n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
+            buffer[n] = '\0'; // Um es zu einem string zu machen.
+            printf("Client : %s\n", buffer);
+            /* Senden einer Antwort an den Server */
+            sendto(sockfd, (const char *)hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            printf("Hello message sent.\n");
+            return 0;
+        }
+    \end{CppCode}
+\end{program}
+\noindent
+\newpage
+\subsection{Anwendung von Network Address Translation (NAT)}
+Um die Datenpakete des Windows Treibers an das Internet zu senden ist NAT erforderlich. Die Datenpakete des Windows-Treibers besitzen, auch nach der Ankunft bei unserem Server, nur eine lokale IP-Adresse als Absender, es handelt es sich um die IP-Adresse des virtuellen Netzwerkadapters unter Windows. Um diese Adresse zu übersetzen verwenden wir aus Gründen der Einfachkeit keine eigene NAT Implementierung sondern greifen auf bereits vorhandene Lösungen zurück. 
+\\\\ 
+Im speziellen setzen wir hier auf eine relativ einfache Lösung mittels iptables.
+Iptables existieren seit Linuxkernel 2.4 mit ihnen lässt sich der IP-Paketfilter des Linuxkernels konfigurieren, aber auch die Minipulation von Datenpaketen ist möglich. Genau diese Manipulation verwenden wir um NAT zu betreiben. Tatsächlich wird iptables schon mit einer vollständigen Implementierung von NAT ausgeliefert.
+\\ % https://wiki.ubuntuusers.de/iptables2/
+\begin{center}
+    \textbf{iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE}
+\end{center}
+\ \\ 
+Mit diesem Befehl aktivieren wir NAT für den Host-Rechner. Bei dem Parameter -o handelt es sich um den Netzwerkadapter welcher eine Verbindung in das Internet besitzt. Im Grundlegendem sagt dieser Befehl nur das alle IP-Pakete die den Rechner über Netzwerkadapter eth1 verlassen möchten maskiert werden. Maskieren bedeutet in diesem Fall das er die Absenderadresse und Port gegen die Adresse des Netzwerkadapters und einen eigens gewählten Port ausgetauscht wird. Es wird dabei auch implizit eine entsprechende Umkehrregel erstellt. Einghende Datenpakete werden also im prerouting wieder auf lokale IP-Adressen umgeschrieben. % https://www.karlrupp.net/de/computer/nat_tutorial
+\\\\
+Dieses maskieren findet für alle Datenpakete statt, auch für jene die vom Host-Rechner selbst stammen. Jedoch wird generell versucht immer den bereitsvorhandenen Port beizubehalten wesshalb es nur nie bis selten zu änderungen an dem IP-Header kommen sollte.
+\\\\ 
+Da wir nun effektiv eine NAT-Wall haben ist es einem Windows Nutzer nicht mehr ohne weiteres möglich öffentlich zugängliche Server auf seinem Rechner zu betreiben. Hierzu müsste man eine Portweiterleitung einrichten. Portweiterleitungen kann man aber nur einrichten wenn man zugang zum Host-Rechner hat auf dem unser Multi-Wan Bonding Proxy Server läuft. Bedeutet zum Betrieb eines öffentlich erreichbaren Servers über NetShare ist es erforderlich eine Portweiterleitungs Regel beim NetShare Server hinzuzufügen. Diese könnte folgendermaßen aussehen:
+\\ 
+\begin{center}
+    \textbf{iptables -t nat -A PREROUTING -p tcp -i eth1 --dport 443 -j DNAT --to-destination 10.0.0.2:8443}
+\end{center}
+\ \\
+Dabei ist -i der Netzwerkadapter des Proxy Servers der mit dem Internet verbunden ist, --dport der Port den wir in das lokale Netzwerk weiterleiten möchten und --to-destination der Ziel Endpunkt im lokalen Netzwerk. In unserem Fall muss die Ziel IP-Adresse 10.0.0.2 sein da der virtuelle Netzwerkadapter des Windows Treibers standardmäßig diese IP-Adresse bekommt. 

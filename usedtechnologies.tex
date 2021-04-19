@@ -16,7 +16,7 @@ Auch für Video/Audio-Streaming von Unterwegs eignet sich Multi-Wan Bonding sehr
 \begin{figure}[h]
     \centering
     \includegraphics[width=1\textwidth]{WANB.jpg}
-    \caption[WANB]{Multi-WAN Bonding Konzept}%[\cite{WANB}]
+    \caption[Multi-WAN Bonding Konzept]{Multi-WAN Bonding Konzept}%[\cite{WANB}]
 \end{figure}
 Im Vergleich zu einer Normalen Verbindungsmethode handelt es sich beim Multi-Wan Bonding um eine Art von VPN Tunnel. Datenpakete laufen nicht wie gewöhnlich direkt über eine Leitung sondern werden beim Betreten des VPN Tunnels von einer Software oder Hardware Multi-Wan Lösung auf mehrere Leitungen aufgeteilt. Dies alleine ist jedoch noch nicht ganz ausreichend. Um wieder eine Verbindung zu bekommen die sich auch verwenden lässt, ist es notwendig, diese aufgeteilten Datenpakete wieder zusammen zu führen. Es gibt also einen entfernten Endpunkt, der als Proxy fungiert. Dieser Endpunkt empfängt die Datenpakete, die über die verschiedenen Verbindungen hinausgesandt wurden und setzt diese wieder zu einem Datenstrom zusammen. Damit stellt er das Ende des VPN Tunnels dar. 
 \\\\
