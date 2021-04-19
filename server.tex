@@ -420,7 +420,7 @@ Prototyp: int bind(int sockfd, const struct sockaddr *addr, socklen\_t addrlen);
     \item \textbf{Rückgabe}: 0 wenn erfolgreich gesetzt. -1 im Fehlerfall.$^{3}$
 \end{enumerate} 
 \ \\%https://man7.org/linux/man-pages/man2/bind.2.html
-Unser socket ist damit fertig. Alles, was wir jetzt noch machen müssen, ist mittels recvfrom() Daten aus dem Socket zu lesen.$^{1}$ Im Falle unserer Serverimplementierung wird davor aber noch mit einem select() Systemaufruf überprüft, ob es Daten zu lesen gibt. Für gewöhnlich wird ein recv() Systemaufruf verwendet.\footnote[4]{\cite[Vgl.][]{SRV17}} Dies ist hier aber ausnahmsweise nicht der Fall, da wir keine Verbindung zu einem fixen entfernten Endpunkt haben, sondern von vielen verschiedenen Endpunkten Daten empfangen können.
+Unser socket ist damit fertig. Alles, was wir jetzt noch machen müssen, ist, mittels recvfrom() Daten aus dem Socket zu lesen.$^{1}$ Im Falle unserer Serverimplementierung wird davor aber noch mit einem select() Systemaufruf überprüft, ob es Daten zu lesen gibt. Für gewöhnlich wird ein recv() Systemaufruf verwendet.\footnote[4]{\cite[Vgl.][]{SRV17}} Dies ist hier aber ausnahmsweise nicht der Fall, da wir keine Verbindung zu einem fixen entfernten Endpunkt haben, sondern von vielen verschiedenen Endpunkten Daten empfangen können.
 \\\\
 Prototyp: ssize\_t recvfrom(int sockfd, void *buf, size\_t len, int flags, struct sockaddr *src\_addr, socklen\_t *addrlen);
 \begin{enumerate}
@@ -434,7 +434,7 @@ Prototyp: ssize\_t recvfrom(int sockfd, void *buf, size\_t len, int flags, struc
     \item \textbf{Rückgabe}: 0 wenn Verbindung ordnungsgemäß getrennt. Anzahl der Bytes wenn welche empfangen wurden. -1 im Fehlerfall.$^{1}$
 \end{enumerate} 
 \ \\%https://linux.die.net/man/2/recvfrom
-Neben dem Empfangen muss aber auch noch die Möglichkeit bestehen Datagrams zu senden. Hierfür gibt es den Systemaufruf sendto(). Mittels sendto() kann ein übergebener Buffer an eine bestimmte Zieladresse gesendet werden.\footnote[2]{\cite[Vgl.][]{SRV18}}
+Außer dem Empfangen muss aber auch noch die Möglichkeit bestehen, Datagrams zu senden. Hierfür gibt es den Systemaufruf sendto(). Mittels diesem kann ein übergebener Buffer an eine bestimmte Zieladresse gesendet werden.\footnote[2]{\cite[Vgl.][]{SRV18}}
 \\\\
 Prototyp: ssize\_t sendto(int sockfd, const void *buf, size\_t len, int flags, const struct sockaddr *dest\_addr, socklen\_t addrlen);$^{2}$
 \begin{enumerate}
@@ -449,7 +449,7 @@ Prototyp: ssize\_t sendto(int sockfd, const void *buf, size\_t len, int flags, c
 \ \\%https://linux.die.net/man/2/sendto
 \newpage
 \subsubsection{UDP-Socket Server Beispielcode}
-Der nachfolgende Codeblock (Programm \ref{SIMP1}) zeigt wie auf einem UDP Port gelauscht werden kann und wie es möglich ist Daten zu empfangen/versenden.
+Der nachfolgende Codeblock (Programm \ref{SIMP1}) zeigt, wie auf einem UDP Port gelauscht werden kann und wie es möglich ist, Daten zu empfangen/versenden.
 \begin{program}[H]
     \caption{Simpler UDP Server}
     \label{SIMP1}
@@ -496,23 +496,23 @@ int main() {
 \noindent
 \newpage
 \subsection{Anwendung von Network Address Translation (NAT)}
-Um die Datenpakete des Windows Treibers an das Internet zu senden ist NAT erforderlich. Die Datenpakete des Windows-Treibers besitzen, auch nach der Ankunft bei unserem Server, nur eine lokale IP-Adresse als Absender, es handelt es sich um die IP-Adresse des virtuellen Netzwerkadapters unter Windows. Um diese Adresse zu übersetzen verwenden wir aus Gründen der Einfachkeit keine eigene NAT Implementierung sondern greifen auf bereits vorhandene Lösungen zurück. 
+Um die Datenpakete des Windows Treibers an das Internet zu senden, ist NAT erforderlich. Die Datenpakete des Windows-Treibers besitzen, auch nach der Ankunft bei unserem Server, nur eine lokale IP-Adresse als Absender. Es handelt sich dabeium die IP-Adresse des virtuellen Netzwerkadapters unter Windows. Um diese Adresse zu übersetzen, verwenden wir aus Gründen der Einfachheit keine eigene NAT Implementierung, sondern greifen auf bereits vorhandene Lösungen zurück. 
 \\\\ 
-Im speziellen setzen wir hier auf eine relativ einfache Lösung mittels iptables.
-Iptables existieren seit Linuxkernel 2.4 mit ihnen lässt sich der IP-Paketfilter des Linuxkernels konfigurieren, aber auch die Minipulation von Datenpaketen ist möglich. Genau diese Manipulation verwenden wir um NAT zu betreiben. Tatsächlich wird iptables schon mit einer vollständigen Implementierung von NAT ausgeliefert.\footnote[1]{\cite[Vgl.][]{SRV19}}
+Im Speziellen setzen wir hier auf eine relativ einfache Lösung mittels iptables.
+Iptables existieren seit Linuxkernel 2.4. Mit ihnen lässt sich der IP-Paketfilter des Linuxkernels konfigurieren, aber auch die Manipulation von Datenpaketen ist möglich. Genau diese Manipulation verwenden wir, um NAT zu betreiben. Tatsächlich wird iptables schon mit einer vollständigen Implementierung von NAT ausgeliefert.\footnote[1]{\cite[Vgl.][]{SRV19}}
 \\ % https://wiki.ubuntuusers.de/iptables2/
 \begin{center}
     \textbf{iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE} \footnote[2]{\cite[Vgl.][]{SRV20}}
 \end{center}
 \ \\ 
-Mit diesem Befehl aktivieren wir NAT für den Host-Rechner. Bei dem Parameter -o handelt es sich um den Netzwerkadapter welcher eine Verbindung in das Internet besitzt. Im Grundlegendem sagt dieser Befehl nur das alle IP-Pakete die den Rechner über Netzwerkadapter eth1 verlassen möchten maskiert werden. Maskieren bedeutet in diesem Fall das er die Absenderadresse und Port gegen die Adresse des Netzwerkadapters und einen eigens gewählten Port ausgetauscht wird. Es wird dabei auch implizit eine entsprechende Umkehrregel erstellt. Einghende Datenpakete werden also im prerouting wieder auf lokale IP-Adressen umgeschrieben.$^{2}$ % https://www.karlrupp.net/de/computer/nat_tutorial
+Mit diesem Befehl aktivieren wir NAT für den Host-Rechner. Bei dem Parameter -o handelt es sich um den Netzwerkadapter, der eine Verbindung in das Internet besitzt. Grundsätzlich sagt dieser Befehl nur, dass alle IP-Pakete, die den Rechner über Netzwerkadapter eth1 verlassen möchten, maskiert werden. Maskieren bedeutet in diesem Fall, dass Absenderadresse und Port gegen die Adresse des Netzwerkadapters und einen eigens gewählten Port ausgetauscht wird. Es wird dabei auch implizit eine entsprechende Umkehrregel erstellt. Einghende Datenpakete werden also im prerouting wieder auf lokale IP-Adressen umgeschrieben.$^{2}$ % https://www.karlrupp.net/de/computer/nat_tutorial
 \\\\
-Dieses maskieren findet für alle Datenpakete statt, auch für jene die vom Host-Rechner selbst stammen. Jedoch wird generell versucht immer den bereitsvorhandenen Port beizubehalten wesshalb es nur nie bis selten zu änderungen an dem IP-Header kommen sollte.$^{2}$
+Dieses Maskieren findet für alle Datenpakete statt, auch für jene, die vom Host-Rechner selbst stammen. Jedoch wird generell versucht, immer den bereitsvorhandenen Port beizubehalten, wesshalb es nie bis selten zu Änderungen an dem IP-Header kommen sollte.$^{2}$
 \\\\ 
-Da wir nun effektiv eine NAT-Wall haben ist es einem Windows Nutzer nicht mehr ohne weiteres möglich öffentlich zugängliche Server auf seinem Rechner zu betreiben. Hierzu müsste man eine Portweiterleitung einrichten. Portweiterleitungen kann man aber nur einrichten wenn man zugang zum Host-Rechner hat auf dem unser Multi-Wan Bonding Proxy Server läuft. Bedeutet zum Betrieb eines öffentlich erreichbaren Servers über NetShare ist es erforderlich eine Portweiterleitungs Regel beim NetShare Server hinzuzufügen. Diese könnte folgendermaßen aussehen:
+Da wir nun effektiv eine NAT-Wall haben, ist es einem Windows Nutzer nicht mehr ohne weiteres möglich, öffentlich zugängliche Server auf seinem Rechner zu betreiben. Hierzu müsste man eine Portweiterleitung einrichten. Portweiterleitungen können aber nur einrichten werden, wenn ein Zugang zum Host-Rechner besteht auf dem unser Multi-Wan Bonding Proxy Server läuft. Dies bedeutet, zum Betrieb eines öffentlich erreichbaren Servers über NetShare ist es erforderlich, eine Portweiterleitungsregel beim NetShare Server hinzuzufügen. Diese könnte folgendermaßen aussehen:
 \\ 
 \begin{center}
     \textbf{iptables -t nat -A PREROUTING -p tcp -i eth1 --dport 443 -j DNAT --to-destination 10.0.0.2:8443}
 \end{center}
 \ \\
-Dabei ist -i der Netzwerkadapter des Proxy Servers der mit dem Internet verbunden ist, --dport der Port den wir in das lokale Netzwerk weiterleiten möchten und --to-destination der Ziel Endpunkt im lokalen Netzwerk. In unserem Fall muss die Ziel IP-Adresse 10.0.0.2 sein da der virtuelle Netzwerkadapter des Windows Treibers standardmäßig diese IP-Adresse bekommt.$^{1}$
+Dabei ist -i der Netzwerkadapter des Proxy Servers, der mit dem Internet verbunden ist, --dport der Port, der in das lokale Netzwerk weiterleiten werden soll und --to-destination der Ziel Endpunkt im lokalen Netzwerk. In unserem Fall muss die Ziel IP-Adresse 10.0.0.2 sein, da der virtuelle Netzwerkadapter des Windows Treibers standardmäßig diese IP-Adresse bekommt.$^{1}$
